@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusOps — Smart Campus Management Platform | UEMF</title>
+    <meta name="description"
+        content="CampusOps is a modern campus management platform for UEMF. Manage planning, attendance, payments, and academic progress in one unified system.">
+    <link rel="stylesheet" href="campusops-styles.css">
+    <link rel="icon" href="UEMF.png" type="image/png">
+</head>
+
+<body>
+
+    <!-- ===== NAVBAR ===== -->
+    <nav class="navbar" id="navbar">
+        <a href="#" class="navbar-brand">
+            <img src="UEMF.png" alt="UEMF Logo">
+            <span>CampusOps</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#dashboard">Dashboard</a></li>
+            <li><a href="#integrations">Integrations</a></li>
+            <li><a href="#roles">Roles</a></li>
+            <li><a href="#" class="btn-primary">Sign In &#x2192;</a></li>
+        </ul>
+        <button class="mobile-toggle"
+            onclick="document.querySelector('.nav-links').classList.toggle('show')">&#9776;</button>
+    </nav>
+
+    <!-- ===== HERO ===== -->
+    <section class="hero" id="hero">
+        <div class="hero-bg">
+            <img src="campus_hero.png" alt="Campus">
+        </div>
+        <div class="hero-orbs">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge"><span class="dot"></span> Now live for UEMF — 2025/2026</div>
+            <h1>Your Campus,<br><span class="gradient-text">Brilliantly Managed.</span></h1>
+            <p>CampusOps is the all-in-one academic management platform. Planning, attendance, payments, and progress
+                tracking — seamlessly connected.</p>
+            <div class="hero-actions">
+                <a href="#dashboard" class="btn-primary btn-lg">Explore Demo &#x2192;</a>
+                <a href="#features" class="btn-secondary btn-lg">&#9655; Watch Overview</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== STATS BAR ===== -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-number">1,200+</div>
+            <div class="stat-label">Students Managed</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">85+</div>
+            <div class="stat-label">Course Modules</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">98%</div>
+            <div class="stat-label">Attendance Tracked</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Bot Availability</div>
+        </div>
+    </div>
+
+    <!-- ===== FEATURES ===== -->
+    <section class="section" id="features">
+        <div class="section-header">
+            <div class="overline">Core Modules</div>
+            <h2>Everything You Need to Run a Campus</h2>
+            <p>Six powerful modules designed for academic excellence and operational efficiency.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card fade-in-up">
+                <div class="feature-icon">&#128197;</div>
+                <h3>Planning & Scheduling</h3>
+                <p>Create and manage weekly schedules, assign rooms, modules, teachers, and groups with drag-and-drop
+                    ease.</p>
+                <span class="feature-tag">Daily / Weekly / Custom Views</span>
+            </div>
+            <div class="feature-card fade-in-up" style="animation-delay:0.1s">
+                <div class="feature-icon">&#9989;</div>
+                <h3>Attendance Tracking</h3>
+                <p>Mark presence, absence, or tardiness in real-time. Upload justification documents with built-in OCR
+                    extraction.</p>
+                <span class="feature-tag" style="background:rgba(6,182,212,0.1);color:var(--accent)">Smart OCR</span>
+            </div>
+            <div class="feature-card fade-in-up" style="animation-delay:0.2s">
+                <div class="feature-icon">&#128176;</div>
+                <h3>Payment Management</h3>
+                <p>Track inscriptions, monthly installments, and payment statuses. Get automatic alerts for overdue
+                    payments.</p>
+                <span class="feature-tag"
+                    style="background:rgba(16,185,129,0.1);color:var(--success)">Auto-Alerts</span>
+            </div>
+            <div class="feature-card fade-in-up" style="animation-delay:0.3s">
+                <div class="feature-icon">&#128200;</div>
+                <h3>Progress Monitoring</h3>
+                <p>Track module completion percentage by group. Visualize academic advancement with real-time
+                    dashboards.</p>
+                <span class="feature-tag" style="background:rgba(245,158,11,0.1);color:var(--warning)">Real-time</span>
+            </div>
+            <div class="feature-card fade-in-up" style="animation-delay:0.4s">
+                <div class="feature-icon">&#128276;</div>
+                <h3>Smart Notifications</h3>
+                <p>Multi-channel alerts via Telegram, WhatsApp, and Email. Never miss a schedule change or payment
+                    deadline.</p>
+                <span class="feature-tag" style="background:rgba(139,92,246,0.1);color:#8b5cf6">Multi-Channel</span>
+            </div>
+            <div class="feature-card fade-in-up" style="animation-delay:0.5s">
+                <div class="feature-icon">&#128272;</div>
+                <h3>Roles & Permissions</h3>
+                <p>Fine-grained access control for Admins, Scolarité, Enseignants, and Étudiants with JWT-secured
+                    authentication.</p>
+                <span class="feature-tag" style="background:rgba(239,68,68,0.1);color:var(--danger)">JWT Secured</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== DASHBOARD PREVIEW ===== -->
+    <section id="dashboard">
+        <div class="section" style="padding-bottom:0">
+            <div class="section-header">
+                <div class="overline">Live Preview</div>
+                <h2>A Dashboard That Works For You</h2>
+                <p>Powerful insights at a glance. Every metric your institution needs, beautifully presented.</p>
+            </div>
+        </div>
+        <div class="dashboard-preview">
+            <div class="dashboard-mockup">
+                <div class="mockup-topbar">
+                    <span class="mockup-dot red"></span>
+                    <span class="mockup-dot yellow"></span>
+                    <span class="mockup-dot green"></span>
+                    <span class="mockup-url">&#128274; campusops.uemf.ac.ma/dashboard</span>
+                </div>
+                <div class="mockup-body">
+                    <div class="mockup-sidebar">
+                        <div class="sidebar-item active">&#127968; Dashboard</div>
+                        <div class="sidebar-item">&#128197; Planning</div>
+                        <div class="sidebar-item">&#9989; Absences</div>
+                        <div class="sidebar-item">&#128200; Progress</div>
+                        <div class="sidebar-item">&#128176; Payments</div>
+                        <div class="sidebar-item">&#128101; Students</div>
+                        <div class="sidebar-item">&#128218; Modules</div>
+                        <div class="sidebar-item">&#128276; Notifications</div>
+                        <div class="sidebar-item">&#9881; Settings</div>
+                    </div>
+                    <div class="mockup-content">
+                        <h3>&#128075; Welcome back, Admin</h3>
+                        <div class="mini-cards">
+                            <div class="mini-card">
+                                <div class="mc-value" id="counter1">0</div>
+                                <div class="mc-label">Students</div>
+                            </div>
+                            <div class="mini-card">
+                                <div class="mc-value" id="counter2">0%</div>
+                                <div class="mc-label">Attendance</div>
+                            </div>
+                            <div class="mini-card">
+                                <div class="mc-value" id="counter3">0</div>
+                                <div class="mc-label">Pending Payments</div>
+                            </div>
+                            <div class="mini-card">
+                                <div class="mc-value" id="counter4">0%</div>
+                                <div class="mc-label">Avg Progress</div>
+                            </div>
+                        </div>
+                        <div class="chart-placeholder">
+                            <div class="chart-bars" id="chartBars"></div>
+                            <div class="chart-label">
+                                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== INTEGRATIONS ===== -->
+    <section id="integrations">
+        <div class="integrations">
+            <div class="integrations-visual slide-left">
+                <div class="integration-hub">
+                    <div class="hub-center">&#9881;</div>
+                    <div class="hub-node">&#128172;</div>
+                    <div class="hub-node">&#128231;</div>
+                    <div class="hub-node">&#129302;</div>
+                    <div class="hub-node">&#128274;</div>
+                    <div class="hub-node">&#128202;</div>
+                    <div class="hub-node">&#128268;</div>
+                    <div class="hub-line"></div>
+                    <div class="hub-line"></div>
+                    <div class="hub-line"></div>
+                    <div class="hub-line"></div>
+                    <div class="hub-line"></div>
+                    <div class="hub-line"></div>
+                </div>
+            </div>
+            <div class="integrations-text slide-right">
+                <h2>Powered by <span class="gradient-text">OpenClaw</span> Automation</h2>
+                <p>CampusOps connects to OpenClaw for intelligent workflow automation, ensuring your campus runs on
+                    autopilot.</p>
+                <ul class="integration-list">
+                    <li><span class="check">&#10003;</span> Daily planning sent to teachers via Telegram at 7:00 AM</li>
+                    <li><span class="check">&#10003;</span> Instant absence notifications to students & parents</li>
+                    <li><span class="check">&#10003;</span> Automated payment reminders for overdue installments</li>
+                    <li><span class="check">&#10003;</span> Email inbox monitoring via IMAP — no browser needed</li>
+                    <li><span class="check">&#10003;</span> Bot commands: /today, /week, /absence, /progress</li>
+                    <li><span class="check">&#10003;</span> WhatsApp Cloud API integration (optional)</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== USER ROLES ===== -->
+    <section class="section" id="roles">
+        <div class="section-header">
+            <div class="overline">Access Control</div>
+            <h2>Designed for Every Role</h2>
+            <p>Each user gets a tailored experience with role-based permissions and views.</p>
+        </div>
+        <div class="roles-grid">
+            <div class="role-card fade-in-up">
+                <div class="role-avatar">&#128081;</div>
+                <h3>Administrator</h3>
+                <p>Full system control. Manage users, branches, modules, and global settings. View comprehensive
+                    analytics.</p>
+            </div>
+            <div class="role-card fade-in-up" style="animation-delay:0.1s">
+                <div class="role-avatar">&#128221;</div>
+                <h3>Scolarité</h3>
+                <p>Manage student enrollment, groups, planning schedules, and generate attendance & payment reports.</p>
+            </div>
+            <div class="role-card fade-in-up" style="animation-delay:0.2s">
+                <div class="role-avatar">&#127891;</div>
+                <h3>Enseignant</h3>
+                <p>View personal schedule, mark attendance, update module progress, and communicate with student groups.
+                </p>
+            </div>
+            <div class="role-card fade-in-up" style="animation-delay:0.3s">
+                <div class="role-avatar">&#127979;</div>
+                <h3>Étudiant</h3>
+                <p>Check daily planning, view absence records, track academic progress, and monitor payment status.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== CTA ===== -->
+    <section class="cta-section">
+        <h2>Ready to Transform Your Campus?</h2>
+        <p>Join UEMF in modernizing academic management with CampusOps.</p>
+        <a href="#" class="btn-secondary btn-lg">Get Started Today &#x2192;</a>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <img src="UEMF.png" alt="UEMF Logo">
+                <p>CampusOps is a semester-end project for UEMF, built to modernize campus management with automation
+                    and AI-powered integrations.</p>
+            </div>
+            <div>
+                <h4>Platform</h4>
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#dashboard">Dashboard</a></li>
+                    <li><a href="#integrations">Integrations</a></li>
+                    <li><a href="#roles">Roles</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Modules</h4>
+                <ul>
+                    <li><a href="#">Planning</a></li>
+                    <li><a href="#">Attendance</a></li>
+                    <li><a href="#">Payments</a></li>
+                    <li><a href="#">Progress</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Connect</h4>
+                <ul>
+                    <li><a href="#">Telegram Bot</a></li>
+                    <li><a href="#">API Docs</a></li>
+                    <li><a href="#">GitHub</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 CampusOps — UEMF. All rights reserved.</p>
+            <p>Built with &#10084; for academic excellence</p>
+        </div>
+    </footer>
+
+    <script>
+        // ===== Navbar scroll effect =====
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+        });
+
+        // ===== Intersection Observer for animations =====
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        document.querySelectorAll('.fade-in-up, .slide-left, .slide-right, .fade-in').forEach(el => {
+            el.style.animationPlayState = 'paused';
+            observer.observe(el);
+        });
+
+        // ===== Counter Animation =====
+        function animateCounter(id, end, suffix = '') {
+            const el = document.getElementById(id);
+            if (!el) return;
+            let start = 0;
+            const duration = 2000;
+            const stepTime = 20;
+            const steps = duration / stepTime;
+            const increment = end / steps;
+            const timer = setInterval(() => {
+                start += increment;
+                if (start >= end) { start = end; clearInterval(timer); }
+                el.textContent = Math.round(start).toLocaleString() + suffix;
+            }, stepTime);
+        }
+
+        // ===== Chart Bars =====
+        function createChart() {
+            const container = document.getElementById('chartBars');
+            if (!container) return;
+            const data = [65, 82, 90, 55, 78, 42];
+            const colors = ['#1a56db', '#3b82f6', '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b'];
+            data.forEach((val, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = '0%';
+                bar.style.background = colors[i];
+                container.appendChild(bar);
+                setTimeout(() => { bar.style.height = val + '%'; }, 300 + i * 120);
+            });
+        }
+
+        // ===== Trigger on dashboard visible =====
+        const dashObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounter('counter1', 1247);
+                    animateCounter('counter2', 96, '%');
+                    animateCounter('counter3', 23);
+                    animateCounter('counter4', 74, '%');
+                    createChart();
+                    dashObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.3 });
+
+        const dashEl = document.querySelector('.dashboard-mockup');
+        if (dashEl) dashObserver.observe(dashEl);
+
+        // ===== Smooth scroll for nav links =====
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const target = document.querySelector(a.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+
+</body>
+
+</html>

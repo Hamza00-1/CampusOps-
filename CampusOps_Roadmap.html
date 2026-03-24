@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusOps — Phased Implementation Roadmap</title>
+    <meta name="description" content="A visual roadmap and implementation plan for the CampusOps project.">
+    <!-- Reusing existing CSS from the demo -->
+    <link rel="stylesheet" href="campusops-styles.css">
+    <link rel="icon" href="UEMF.png" type="image/png">
+
+    <!-- Mermaid for execution order diagram -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#f1f5f9',
+                lineColor: '#3b82f6',
+                fontFamily: 'Inter, sans-serif'
+            }
+        });
+    </script>
+
+    <style>
+        /* Modern Roadmap Specific Styles */
+        .roadmap-section {
+            padding: 6rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .timeline {
+            position: relative;
+            margin-top: 4rem;
+        }
+
+        /* The central line */
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary), var(--accent), var(--success));
+            border-radius: 4px;
+            opacity: 0.3;
+        }
+
+        .phase-node {
+            display: flex;
+            justify-content: flex-end;
+            padding-right: 50%;
+            position: relative;
+            margin-bottom: 4rem;
+        }
+
+        .phase-node:nth-child(even) {
+            justify-content: flex-start;
+            padding-right: 0;
+            padding-left: 50%;
+        }
+
+        /* The animated dots on the timeline */
+        .phase-node::after {
+            content: '';
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            border: 4px solid var(--primary);
+            z-index: 10;
+            box-shadow: 0 0 15px var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .phase-node:nth-child(2)::after {
+            border-color: #3b82f6;
+            box-shadow: 0 0 15px #3b82f6;
+        }
+
+        .phase-node:nth-child(3)::after {
+            border-color: #ef4444;
+            box-shadow: 0 0 15px #ef4444;
+        }
+
+        .phase-node:nth-child(4)::after {
+            border-color: #f59e0b;
+            box-shadow: 0 0 15px #f59e0b;
+        }
+
+        .phase-node:nth-child(5)::after {
+            border-color: #f472b6;
+            box-shadow: 0 0 15px #f472b6;
+        }
+
+        .phase-node:nth-child(6)::after {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 15px #8b5cf6;
+        }
+
+        .phase-node:hover::after {
+            transform: translate(-50%, -50%) scale(1.3);
+            background: var(--primary);
+        }
+
+        .phase-card {
+            width: calc(100% - 50px);
+            background: var(--gradient-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            position: relative;
+            box-shadow: var(--shadow-md);
+            transition: all 0.4s;
+            cursor: pointer;
+        }
+
+        .phase-node:nth-child(odd) .phase-card {
+            margin-right: 50px;
+        }
+
+        .phase-node:nth-child(even) .phase-card {
+            margin-left: 50px;
+        }
+
+        .phase-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(6, 182, 212, 0.4);
+        }
+
+        .phase-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .phase-header h3 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .phase-badge {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .phase-goal {
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 4px solid var(--accent);
+            padding: 1rem 1.5rem;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 1.8rem;
+        }
+
+        .task-list {
+            list-style: none;
+            display: grid;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.8rem 1.2rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .task-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--glass-border);
+            color: var(--text-primary);
+        }
+
+        .task-item i {
+            color: var(--primary-light);
+            margin-top: 2px;
+            font-size: 1.1rem;
+        }
+
+        .deliverable-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.6rem 1.2rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: var(--success);
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        .deliverable-tag span {
+            background: var(--success);
+            color: #000;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.65rem;
+        }
+
+        .mermaid-card {
+            background: var(--gradient-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 3rem;
+            margin-top: 5rem;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 850px) {
+            .timeline::before {
+                left: 30px;
+            }
+
+            .phase-node {
+                padding-right: 0 !important;
+                padding-left: 70px !important;
+                justify-content: flex-start !important;
+            }
+
+            .phase-node::after {
+                left: 30px !important;
+            }
+
+            .phase-node:nth-child(odd) .phase-card,
+            .phase-node:nth-child(even) .phase-card {
+                margin: 0;
+            }
+
+            .phase-card {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ===== NAVBAR ===== -->
+    <nav class="navbar" id="navbar">
+        <a href="CampusOps_Demo.html" class="navbar-brand">
+            <img src="UEMF.png" alt="UEMF Logo"
+                onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%231a56db\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M22 10v6M2 10l10-5 10 5-10 5z\'/><path d=\'M6 12v5c3 3 9 3 12 0v-5\'/></svg>'">
+            <span>CampusOps</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="CampusOps_Demo.html#features">Back to Demo</a></li>
+            <li><a href="#" class="btn-primary">Watch Repository &#x2192;</a></li>
+        </ul>
+    </nav>
+
+    <!-- ===== HERO ===== -->
+    <section class="hero" id="hero" style="min-height: 60vh; padding-bottom: 2rem;">
+        <div class="hero-bg"></div>
+        <div class="hero-orbs">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge"><span class="dot"></span> Implementation Master Plan</div>
+            <h1>The Journey to a <br><span class="gradient-text">Smart Campus.</span></h1>
+            <p>From zero to a fully distributed cloud-native architecture. Here is the step-by-step roadmap to building
+                CampusOps.</p>
+        </div>
+    </section>
+
+    <!-- ===== ROADMAP TIMELINE ===== -->
+    <section class="roadmap-section">
+        <div class="section-header fade-in-up">
+            <div class="overline">Project Phases</div>
+            <h2>8 Steps to Production</h2>
+            <p>We build and verify each phase before moving to the next. After each phase, you have a working, testable
+                increment — no more "everything at once" complexity.</p>
+        </div>
+
+        <div class="timeline">
+            <!-- Phase 1 -->
+            <div class="phase-node fade-in-up">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <div class="phase-badge">1</div>
+                        <h3>Scaffolding & Infrastructure 🏗️</h3>
+                    </div>
+                    <div class="phase-goal">
+                        <strong>Goal:</strong> Get a running containerized API with a connected database. Zero business
+                        logic, just the skeleton.
+                    </div>
+                    <ul class="task-list">
+                        <li class="task-item"><i>&#9656;</i> Init Node.js + TS project (package.json, tsconfig.json)
+                        </li>
+                        <li class="task-item"><i>&#9656;</i> Create Express app with /health check</li>
+                        <li class="task-item"><i>&#9656;</i> Env config with Zod validation</li>
+                        <li class="task-item"><i>&#9656;</i> Docker Compose (API + PostgreSQL + Redis)</li>
+                        <li class="task-item"><i>&#9656;</i> Prisma setup + empty schema & Logging handler</li>
+                    </ul>
+                    <div class="deliverable-tag">
+                        <span>&#10003;</span> `docker compose up` → Responds on localhost:3000/health
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="phase-node fade-in-up" style="animation-delay: 0.1s;">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <div class="phase-badge">2</div>
+                        <h3>Database & Models 🗄️</h3>
+                    </div>
+                    <div class="phase-goal">
+                        <strong>Goal:</strong> Full database schema from ERD, migrations, and seed data with demo
+                        accounts.
+                    </div>
+                    <ul class="task-list">
+                        <li class="task-item"><i>&#9656;</i> Define Prisma models for Branches, Users, Modules, Groups
+                        </li>
+                        <li class="task-item"><i>&#9656;</i> Relational models: GroupStudent, Planning, Absence</li>
+                        <li class="task-item"><i>&#9656;</i> Tracking models: Progress, Payment, Notification</li>
+                        <li class="task-item"><i>&#9656;</i> Generate + run Prisma migrations</li>
+                        <li class="task-item"><i>&#9656;</i> Seed data script with demo accounts (Admin, Scolarité,
+                            Prof, Student)</li>
+                    </ul>
+                    <div class="deliverable-tag"
+                        style="border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.1); color: #60a5fa;">
+                        <span style="background: #60a5fa;">&#10003;</span> Run `npm run db:seed` → 5 demo users synced
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="phase-node fade-in-up" style="animation-delay: 0.2s;">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <div class="phase-badge">3</div>
+                        <h3>Authentication & Security 🔐</h3>
+                    </div>
+                    <div class="phase-goal">
+                        <strong>Goal:</strong> Secure JWT auth flow with RBAC. No one accesses anything without proper
+                        tokens + role.
+                    </div>
+                    <ul class="task-list">
+                        <li class="task-item"><i>&#9656;</i> JWT utilities & password hashing (bcrypt)</li>
+                        <li class="task-item"><i>&#9656;</i> Auth service & controller (register, login, refresh)</li>
+                        <li class="task-item"><i>&#9656;</i> JWT Verification Middleware</li>
+                        <li class="task-item"><i>&#9656;</i> RBAC middleware (`requireRole()`)</li>
+                        <li class="task-item"><i>&#9656;</i> Security hardening (helmet, cors, rate-limit, zod schemas)
+                        </li>
+                    </ul>
+                    <div class="deliverable-tag"
+                        style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); color: #f87171;">
+                        <span style="background: #f87171;">&#10003;</span> Register → Login → Get JWT → Access endpoints
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="phase-node fade-in-up" style="animation-delay: 0.3s;">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <div class="phase-badge">4</div>
+                        <h3>Core CRUD APIs 📡</h3>
+                    </div>
+                    <div class="phase-goal">
+                        <strong>Goal:</strong> Full REST API for all business modules. Each module = controller +
+                        service + routes + validation.
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px;">
+                            <h4 style="color:#fcd34d; margin-bottom: 0.5rem; font-size: 0.9rem;">4A: Entity Management
+                            </h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">CRUD for Branches, Users, Modules,
+                                Groups, Group Enrollment.</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px;">
+                            <h4 style="color:#fcd34d; margin-bottom: 0.5rem; font-size: 0.9rem;">4B: Business Logic</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Logic for Planning, Absences,
+                                Progress %, Payments, Notifications.</p>
+                        </div>
+                    </div>
+                    <div class="deliverable-tag"
+                        style="border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); color: #fbbf24;">
+                        <span style="background: #fbbf24;">&#10003;</span> All endpoints working in Swagger UI at
+                        `/api/docs`
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 5 -->
+            <div class="phase-node fade-in-up" style="animation-delay: 0.4s;">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <div class="phase-badge">5</div>
+                        <h3>Frontend Dashboard 🎨</h3>
+                    </div>
+                    <div class="phase-goal">
+                        <strong>Goal:</strong> Professional React SPA connected to the backend API. Role-based views,
+                        real-time data, premium design.
+                    </div>
+                    <ul class="task-list">
+                        <li class="task-item"><i>&#9656;</i> Vite + React + TypeScript setup</li>
+                        <li class="task-item"><i>&#9656;</i> Global CSS + Theme Design System</li>
+                        <li class="task-item"><i>&#9656;</i> Auth Pages (Login/Register) & JWT storage</li>
+                        <li class="task-item"><i>&#9656;</i> Dashboard layout, Calendar view, Admin tables</li>
+                        <li class="task-item"><i>&#9656;</i> Visual progress bars, Charts, and Notification panel</li>
+                    </ul>
+                    <div class="deliverable-tag"
+                        style="border-color: rgba(244, 114, 182, 0.4); background: rgba(244, 114, 182, 0.1); color: #f472b6;">
+                        <span style="background: #f472b6;">&#10003;</span> Fully working dashboard at localhost:5173
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 6 -->
+            <div class="phase-node fade-in-up" style="animation-delay: 0.5s;">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <div class="phase-badge">6</div>
+                        <h3>Integrations & Bots 🤖</h3>
+                    </div>
+                    <div class="phase-goal">
+                        <strong>Goal:</strong> Connect the backend to the outside world — Telegram, Email, OpenClaw.
+                    </div>
+                    <ul class="task-list">
+                        <li class="task-item"><i>&#9656;</i> Telegram bot setup + `/link` OTP flow</li>
+                        <li class="task-item"><i>&#9656;</i> Bot commands: /today, /week, /absence</li>
+                        <li class="task-item"><i>&#9656;</i> SMTP and IMAP Email integrations</li>
+                        <li class="task-item"><i>&#9656;</i> OpenClaw webhook receivers</li>
+                        <li class="task-item"><i>&#9656;</i> Scheduled Cron jobs for 7 AM planning notifications</li>
+                    </ul>
+                    <div class="deliverable-tag"
+                        style="border-color: rgba(139, 92, 246, 0.4); background: rgba(139, 92, 246, 0.1); color: #a78bfa;">
+                        <span style="background: #a78bfa;">&#10003;</span> Bot responds & triggers work automatically
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phases 7 & 8 combined slightly for flow -->
+            <div class="phase-node fade-in-up" style="animation-delay: 0.6s;">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <div class="phase-badge">7+</div>
+                        <h3>Docs, Tests & Cloud 🚀</h3>
+                    </div>
+                    <div class="phase-goal">
+                        <strong>Goal:</strong> Production-ready quality, automated tests, and live deployment.
+                    </div>
+                    <ul class="task-list">
+                        <li class="task-item"><i>&#9656;</i> Swagger/OpenAPI annotations generated</li>
+                        <li class="task-item"><i>&#9656;</i> Jest Unit & Integration test coverage</li>
+                        <li class="task-item"><i>&#9656;</i> Deploy PostgreSQL to managed provider (Supabase/Neon)</li>
+                        <li class="task-item"><i>&#9656;</i> Deploy API & Frontend to containers / Edge network</li>
+                    </ul>
+                    <div class="deliverable-tag"
+                        style="border-color: rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.1); color: #22d3ee;">
+                        <span style="background: #22d3ee;">&#10003;</span> Live URL mapped + Demo Video recorded
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Execution Flow Diagram -->
+        <div class="mermaid-card fade-in-up">
+            <h3 style="margin-bottom: 10px; font-size: 1.6rem;">Execution Dependency Graph</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.95rem;">Visual representation of
+                the sequential roadmap dependencies.</p>
+            <div class="mermaid">
+                graph TD
+                P1["Phase 1: Scaffolding 🏗️"] --> P2["Phase 2: Database 🗄️"]
+                P2 --> P3["Phase 3: Auth & Security 🔐"]
+                P3 --> P4A["Phase 4A: Entity CRUD 📡"]
+                P4A --> P4B["Phase 4B: Business Logic 📡"]
+                P4B --> P5["Phase 5: Frontend Dashboard 🎨"]
+                P4B --> P6["Phase 6: Integrations 🤖"]
+                P5 --> P7["Phase 7: Docs & Tests 📋"]
+                P6 --> P7
+                P7 --> P8["Phase 8: Cloud Deploy 🚀"]
+
+                %% Styling
+                classDef p1 fill:#22c55e,color:#fff,stroke:none,rx:5px,ry:5px;
+                classDef p2 fill:#3b82f6,color:#fff,stroke:none,rx:5px,ry:5px;
+                classDef p3 fill:#ef4444,color:#fff,stroke:none,rx:5px,ry:5px;
+                classDef p4 fill:#f59e0b,color:#fff,stroke:none,rx:5px,ry:5px;
+                classDef p5 fill:#f472b6,color:#fff,stroke:none,rx:5px,ry:5px;
+                classDef p6 fill:#8b5cf6,color:#fff,stroke:none,rx:5px,ry:5px;
+                classDef p7 fill:#06b6d4,color:#fff,stroke:none,rx:5px,ry:5px;
+                classDef p8 fill:#ec4899,color:#fff,stroke:none,rx:5px,ry:5px;
+
+                class P1 p1;
+                class P2 p2;
+                class P3 p3;
+                class P4A,P4B p4;
+                class P5 p5;
+                class P6 p6;
+                class P7 p7;
+                class P8 p8;
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <img src="UEMF.png" alt="UEMF Logo"
+                    onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'36\' height=\'36\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%231a56db\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M22 10v6M2 10l10-5 10 5-10 5z\'/><path d=\'M6 12v5c3 3 9 3 12 0v-5\'/></svg>'">
+                <p>CampusOps is a semester-end project for UEMF, built to modernize campus management with automation
+                    and AI-powered integrations.</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 CampusOps — UEMF. Roadmap & Master Plan.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+        });
+
+        // Intersection Observer for animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        document.querySelectorAll('.fade-in-up').forEach(el => {
+            el.style.animationPlayState = 'paused';
+            observer.observe(el);
+        });
+    </script>
+</body>
+
+</html>

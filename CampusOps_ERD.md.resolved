@@ -1,0 +1,124 @@
+# CampusOps Database Schema (ERD)
+
+This document visualizes the relational database schema for the CampusOps platform, incorporating all core features and bonus requirements (like multi-branch).
+
+```mermaid
+erDiagram
+    BRANCH ||--o{ USER : contains
+    BRANCH ||--o{ MODULE : contains
+    BRANCH ||--o{ GROUP : contains
+
+    USER ||--o{ PLANNING : teaches
+    USER ||--o{ NOTIFICATION : receives
+
+    MODULE ||--o{ PLANNING : covers
+    MODULE ||--o{ PROGRESS : tracked_by
+    
+    GROUP ||--o{ GROUP_STUDENT : enrolls
+    USER ||--o{ GROUP_STUDENT : is_enrolled_in
+    GROUP ||--o{ PLANNING : assigned_to
+    GROUP ||--o{ PROGRESS : monitors
+
+    PLANNING ||--o{ ABSENCE : generates
+    USER ||--o{ ABSENCE : records_for
+
+    USER ||--o{ PAYMENT : responsible_for
+
+    BRANCH {
+        uuid id PK
+        string name
+        string location
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    USER {
+        uuid id PK
+        uuid branch_id FK
+        string name
+        string email
+        string password_hash
+        enum role "Admin, Scolarite, Enseignant, Etudiant"
+        string telegram_chat_id "Nullable"
+        string whatsapp_number "Nullable"
+        string otp_code "Nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    MODULE {
+        uuid id PK
+        uuid branch_id FK
+        string name
+        text description
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    GROUP {
+        uuid id PK
+        uuid branch_id FK
+        string name
+        string academic_year
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    GROUP_STUDENT {
+        uuid group_id FK
+        uuid student_id FK
+        timestamp joined_at
+    }
+
+    PLANNING {
+        uuid id PK
+        uuid module_id FK
+        uuid group_id FK
+        uuid teacher_id FK
+        string room
+        datetime start_time
+        datetime end_time
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ABSENCE {
+        uuid id PK
+        uuid session_id FK
+        uuid student_id FK
+        enum status "Present, Absent, Late"
+        string justification_doc_url "Nullable"
+        text ocr_text_extracted "Nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    PROGRESS {
+        uuid id PK
+        uuid module_id FK
+        uuid group_id FK
+        int percentage
+        uuid last_updated_by_id FK
+        timestamp updated_at
+    }
+
+    PAYMENT {
+        uuid id PK
+        uuid student_id FK
+        enum plan_type "Inscription, Mensualite"
+        decimal amount
+        enum status "Paid, Partial, Unpaid"
+        date due_date
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    NOTIFICATION {
+        uuid id PK
+        uuid user_id FK
+        string title
+        text content
+        boolean is_read
+        timestamp created_at
+    }
+```

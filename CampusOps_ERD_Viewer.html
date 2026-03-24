@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusOps ERD Interactive Viewer</title>
+    
+    <!-- Load Mermaid.js for drawing the ERD -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <!-- Load svg-pan-zoom for zooming and panning -->
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f4f4f9; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+        header { 
+            background: #2c3e50; 
+            color: white; 
+            padding: 1.5rem; 
+            text-align: center; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 { margin: 0; }
+        p { margin: 5px 0 0 0; opacity: 0.8; font-size: 0.9em; }
+        
+        .erd-container { 
+            flex-grow: 1; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            overflow: hidden; 
+            background: white; 
+            margin: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            position: relative;
+        }
+        
+        /* Make sure the mermaid SVG takes full space */
+        .mermaid {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .mermaid svg { 
+            width: 100% !important; 
+            height: 100% !important; 
+            max-width: none !important;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h2>CampusOps Database Schema (Interactive Viewer)</h2>
+        <p>Scroll your mouse wheel to zoom in/out. Click and drag to pan around the diagram.</p>
+    </header>
+    
+    <div class="erd-container">
+        <div class="mermaid" id="mermaid-diagram">
+erDiagram
+    BRANCH ||--o{ USER : contains
+    BRANCH ||--o{ MODULE : contains
+    BRANCH ||--o{ GROUP : contains
+
+    USER ||--o{ PLANNING : teaches
+    USER ||--o{ NOTIFICATION : receives
+
+    MODULE ||--o{ PLANNING : covers
+    MODULE ||--o{ PROGRESS : tracked_by
+    
+    GROUP ||--o{ GROUP_STUDENT : enrolls
+    USER ||--o{ GROUP_STUDENT : is_enrolled_in
+    GROUP ||--o{ PLANNING : assigned_to
+    GROUP ||--o{ PROGRESS : monitors
+
+    PLANNING ||--o{ ABSENCE : generates
+    USER ||--o{ ABSENCE : records_for
+
+    USER ||--o{ PAYMENT : responsible_for
+
+    BRANCH {
+        uuid id PK
+        string name
+        string location
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    USER {
+        uuid id PK
+        uuid branch_id FK
+        string name
+        string email
+        string password_hash
+        enum role "Admin, Scolarite, Enseignant, Etudiant"
+        string telegram_chat_id "Nullable"
+        string whatsapp_number "Nullable"
+        string otp_code "Nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    MODULE {
+        uuid id PK
+        uuid branch_id FK
+        string name
+        text description
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    GROUP {
+        uuid id PK
+        uuid branch_id FK
+        string name
+        string academic_year
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    GROUP_STUDENT {
+        uuid group_id FK
+        uuid student_id FK
+        timestamp joined_at
+    }
+
+    PLANNING {
+        uuid id PK
+        uuid module_id FK
+        uuid group_id FK
+        uuid teacher_id FK
+        string room
+        datetime start_time
+        datetime end_time
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ABSENCE {
+        uuid id PK
+        uuid session_id FK
+        uuid student_id FK
+        enum status "Present, Absent, Late"
+        string justification_doc_url "Nullable"
+        text ocr_text_extracted "Nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    PROGRESS {
+        uuid id PK
+        uuid module_id FK
+        uuid group_id FK
+        int percentage
+        uuid last_updated_by_id FK
+        timestamp updated_at
+    }
+
+    PAYMENT {
+        uuid id PK
+        uuid student_id FK
+        enum plan_type "Inscription, Mensualite"
+        decimal amount
+        enum status "Paid, Partial, Unpaid"
+        date due_date
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    NOTIFICATION {
+        uuid id PK
+        uuid user_id FK
+        string title
+        text content
+        boolean is_read
+        timestamp created_at
+    }
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+        
+        // Wait for Mermaid to render the SVG, then attach the pan-zoom library
+        setTimeout(() => {
+            const svgElement = document.querySelector('.mermaid svg');
+            if(svgElement) {
+                svgPanZoom(svgElement, {
+                    zoomEnabled: true,
+                    controlIconsEnabled: true,
+                    fit: true,
+                    center: true,
+                    minZoom: 0.5,
+                    maxZoom: 15
+                });
+            }
+        }, 1200);
+    </script>
+</body>
+</html>
