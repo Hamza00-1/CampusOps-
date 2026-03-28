@@ -3,10 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
 import { httpLogger } from './middleware/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { successResponse } from './utils/response';
+import { swaggerSpec } from './config/swagger';
 import authRoutes from './modules/auth/auth.routes';
 
 // ============================================
@@ -75,6 +77,12 @@ app.get('/health', (_req, res) => {
         version: '1.0.0',
     }, 'CampusOps API is running'));
 });
+
+// ===== Swagger API Docs =====
+app.use(`${env.API_PREFIX}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'CampusOps API Docs',
+}));
 
 // ===== API Routes =====
 app.use(`${env.API_PREFIX}/auth`, authLimiter, authRoutes);
