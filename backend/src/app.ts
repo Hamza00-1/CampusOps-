@@ -2,10 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 import { httpLogger } from './middleware/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { successResponse } from './utils/response';
+import authRoutes from './modules/auth/auth.routes';
 
 // ============================================
 // CampusOps — Express Application
@@ -36,6 +38,33 @@ app.use(compression());
 // Request logging
 app.use(httpLogger);
 
+// ===== Rate Limiting =====
+
+// Global rate limiter
+const globalLimiter = rateLimit({
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    max: env.RATE_LIMIT_MAX_REQUESTS,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many requests. Please try again later.',
+    },
+});
+app.use(globalLimiter);
+
+// Strict rate limiter for auth endpoints (prevent brute force)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 15,                   // 15 attempts per window
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many authentication attempts. Please try again in 15 minutes.',
+    },
+});
+
 // ===== Health Check (outside API prefix) =====
 app.get('/health', (_req, res) => {
     res.json(successResponse({
@@ -48,10 +77,7 @@ app.get('/health', (_req, res) => {
 });
 
 // ===== API Routes =====
-// Each module's routes will be mounted here in later phases:
-//   app.use(`${env.API_PREFIX}/auth`, authRoutes);
-//   app.use(`${env.API_PREFIX}/users`, userRoutes);
-//   etc.
+app.use(`${env.API_PREFIX}/auth`, authLimiter, authRoutes);
 
 // Placeholder API root
 app.get(env.API_PREFIX, (_req, res) => {
