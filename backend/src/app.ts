@@ -9,7 +9,18 @@ import { httpLogger } from './middleware/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { successResponse } from './utils/response';
 import { swaggerSpec } from './config/swagger';
+
+// ===== Route Imports =====
 import authRoutes from './modules/auth/auth.routes';
+import branchRoutes from './modules/branches/branch.routes';
+import userRoutes from './modules/users/user.routes';
+import moduleRoutes from './modules/modules/module.routes';
+import groupRoutes from './modules/groups/group.routes';
+import planningRoutes from './modules/planning/planning.routes';
+import absenceRoutes from './modules/absences/absence.routes';
+import progressRoutes from './modules/progress/progress.routes';
+import paymentRoutes from './modules/payments/payment.routes';
+import notificationRoutes from './modules/notifications/notification.routes';
 
 // ============================================
 // CampusOps — Express Application
@@ -74,7 +85,7 @@ app.get('/health', (_req, res) => {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         environment: env.NODE_ENV,
-        version: '1.0.0',
+        version: '2.0.0',
     }, 'CampusOps API is running'));
 });
 
@@ -86,20 +97,29 @@ app.use(`${env.API_PREFIX}/docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec, 
 
 // ===== API Routes =====
 app.use(`${env.API_PREFIX}/auth`, authLimiter, authRoutes);
+app.use(`${env.API_PREFIX}/branches`, branchRoutes);
+app.use(`${env.API_PREFIX}/users`, userRoutes);
+app.use(`${env.API_PREFIX}/modules`, moduleRoutes);
+app.use(`${env.API_PREFIX}/groups`, groupRoutes);
+app.use(`${env.API_PREFIX}/planning`, planningRoutes);
+app.use(`${env.API_PREFIX}/absences`, absenceRoutes);
+app.use(`${env.API_PREFIX}/progress`, progressRoutes);
+app.use(`${env.API_PREFIX}/payments`, paymentRoutes);
+app.use(`${env.API_PREFIX}/notifications`, notificationRoutes);
 
-// Placeholder API root
+// API root
 app.get(env.API_PREFIX, (_req, res) => {
     res.json(successResponse({
         name: 'CampusOps API',
-        version: '1.0.0',
+        version: '2.0.0',
         docs: `${env.API_PREFIX}/docs`,
         health: '/health',
         modules: [
             'auth', 'users', 'branches', 'modules', 'groups',
             'planning', 'absences', 'progress', 'payments',
-            'notifications', 'mail',
+            'notifications',
         ],
-    }, 'Welcome to CampusOps API'));
+    }, 'Welcome to CampusOps API — All modules active'));
 });
 
 // ===== Error Handling =====
