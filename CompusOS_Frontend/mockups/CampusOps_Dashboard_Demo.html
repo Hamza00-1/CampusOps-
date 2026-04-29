@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusOps — Dashboard Prototype</title>
+    <meta name="description" content="CampusOps premium dashboard prototype for UEMF Euromed University of Fes.">
+    <link rel="stylesheet" href="campusops-dashboard-styles.css">
+    <link rel="icon" href="images.png" type="image/png">
+</head>
+
+<body>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar">
+        <div class="brand">
+            <img src="images.png" alt="UEMF" class="brand-logo light-logo">
+            <img src="UEMF.png" alt="UEMF" class="brand-logo dark-logo">
+            <span class="brand-text">CampusOps</span>
+        </div>
+        <nav class="nav-menu">
+            <div class="nav-group-label">Main</div>
+            <a class="nav-item active" data-target="view-dashboard"><span class="nav-icon">📊</span> Dashboard</a>
+            <a class="nav-item" data-target="view-planning"><span class="nav-icon">📅</span> Planning</a>
+            <a class="nav-item" data-target="view-absences"><span class="nav-icon">📋</span> Absences & OCR <span
+                    class="nav-badge">3</span></a>
+            <a class="nav-item" data-target="view-payments"><span class="nav-icon">💳</span> Payments</a>
+            <a class="nav-item" data-target="view-progress"><span class="nav-icon">📈</span> Progress</a>
+
+            <div class="nav-group-label">System</div>
+            <a class="nav-item" data-target="view-notifications"><span class="nav-icon">🔔</span> Notifications <span
+                    class="nav-badge">5</span></a>
+            <a class="nav-item" data-target="view-users"><span class="nav-icon">👥</span> Users & Roles</a>
+            <a class="nav-item" data-target="view-settings"><span class="nav-icon">⚙️</span> Settings</a>
+        </nav>
+        <div class="sidebar-footer">
+            <span class="status-dot"></span>
+            <span>OpenClaw <strong>Active</strong></span>
+        </div>
+    </aside>
+
+    <!-- ===== MAIN ===== -->
+    <main class="main-content">
+        <header class="header">
+            <div class="header-left">
+                <div class="header-search">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" placeholder="Search students, modules, rooms...">
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" title="Notifications"><span>🔔</span><span class="notif-dot"></span></button>
+                <button class="icon-btn" title="Messages"><span>💬</span></button>
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme"></button>
+                <div class="h-divider"></div>
+                <div class="user-profile">
+                    <div class="user-info" style="text-align:right">
+                        <span class="user-name">Hamza K.</span>
+                        <span class="user-role">Administrateur</span>
+                    </div>
+                    <div class="avatar">HK</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-area">
+
+            <!-- ================ 1. DASHBOARD ================ -->
+            <section id="view-dashboard" class="view-section active">
+                <div class="welcome-banner">
+                    <div class="welcome-text">
+                        <h2>👋 Bonjour, Hamza!</h2>
+                        <p>Here's what's happening at UEMF today — Saturday, March 15, 2026</p>
+                    </div>
+                    <button class="btn">📄 Generate Weekly Report</button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-blue">🎓</div>
+                            <span class="stat-trend trend-up">↑ 12%</span>
+                        </div>
+                        <div class="stat-value">1,247</div>
+                        <div class="stat-label">Active Students</div>
+                        <div class="stat-spark" id="spark1"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-green">✅</div>
+                            <span class="stat-trend trend-up">↑ 3%</span>
+                        </div>
+                        <div class="stat-value">96.2%</div>
+                        <div class="stat-label">Today's Attendance</div>
+                        <div class="stat-spark" id="spark2"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-yellow">⚠️</div>
+                            <span class="stat-trend trend-down">↑ 5</span>
+                        </div>
+                        <div class="stat-value">23</div>
+                        <div class="stat-label">Overdue Payments</div>
+                        <div class="stat-spark" id="spark3"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-red">🤖</div>
+                            <span class="stat-trend trend-up">Active</span>
+                        </div>
+                        <div class="stat-value">14</div>
+                        <div class="stat-label">OpenClaw Runs Today</div>
+                        <div class="stat-spark" id="spark4"></div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>📌 Today's Schedule (Group A)</h2><button class="btn btn-ghost btn-sm">View All
+                                →</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Module</th>
+                                    <th>Prof</th>
+                                    <th>Room</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>08:00 – 10:00</td>
+                                    <td><strong>Algorithmique</strong></td>
+                                    <td>Prof. Khalid</td>
+                                    <td>A101</td>
+                                </tr>
+                                <tr>
+                                    <td>10:15 – 12:15</td>
+                                    <td><strong>Bases de Données</strong></td>
+                                    <td>Prof. Imane</td>
+                                    <td>B202</td>
+                                </tr>
+                                <tr>
+                                    <td>14:00 – 16:00</td>
+                                    <td><strong>Sécurité Web</strong></td>
+                                    <td>Prof. Hamza</td>
+                                    <td>Lab 3</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>⚡ Recent Activity</h2><button class="btn btn-ghost btn-sm">All Logs →</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-icon bg-green">📨</div>
+                                    <div class="timeline-body">
+                                        <div class="timeline-title">Daily Planning Sent</div>
+                                        <div class="timeline-desc">OpenClaw → Telegram (all teachers)</div>
+                                        <div class="timeline-time">🕐 07:00 AM · <span
+                                                class="badge badge-success badge-dot">Auto</span></div>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-icon bg-blue">📄</div>
+                                    <div class="timeline-body">
+                                        <div class="timeline-title">OCR Justification Processed</div>
+                                        <div class="timeline-desc">Medical certificate — Ayoub E. verified</div>
+                                        <div class="timeline-time">🕐 08:15 AM · <span
+                                                class="badge badge-primary badge-dot">OCR</span></div>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-icon bg-yellow">💸</div>
+                                    <div class="timeline-body">
+                                        <div class="timeline-title">Payment Alert Triggered</div>
+                                        <div class="timeline-desc">12 students notified via WhatsApp</div>
+                                        <div class="timeline-time">🕐 09:30 AM · <span
+                                                class="badge badge-warning badge-dot">Alert</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================ 2. PLANNING ================ -->
+            <section id="view-planning" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>📅 Planning & Schedule</h1>
+                        <p>Manage weekly course schedules, rooms, and teacher assignments</p>
+                    </div>
+                    <div style="display:flex;gap:0.5rem">
+                        <button class="btn btn-outline">← Prev Week</button>
+                        <button class="btn btn-outline">Next Week →</button>
+                        <button class="btn btn-primary">+ New Session</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="calendar-grid">
+                            <div class="cal-header"></div>
+                            <div class="cal-header">Mon 10</div>
+                            <div class="cal-header">Tue 11</div>
+                            <div class="cal-header">Wed 12</div>
+                            <div class="cal-header">Thu 13</div>
+                            <div class="cal-header">Fri 14</div>
+
+                            <div class="cal-cell cal-time">08:00</div>
+                            <div class="cal-cell">
+                                <div class="event-block event-blue">
+                                    <div class="event-title">Algorithmique</div>
+                                    <div class="event-meta">Prof. Khalid · A101</div>
+                                </div>
+                            </div>
+                            <div class="cal-cell"></div>
+                            <div class="cal-cell">
+                                <div class="event-block event-green">
+                                    <div class="event-title">Mathématiques</div>
+                                    <div class="event-meta">Prof. Youssef · Amphi B</div>
+                                </div>
+                            </div>
+                            <div class="cal-cell"></div>
+                            <div class="cal-cell">
+                                <div class="event-block event-orange">
+                                    <div class="event-title">Sécurité Web</div>
+                                    <div class="event-meta">Prof. Hamza · Lab 3</div>
+                                </div>
+                            </div>
+
+                            <div class="cal-cell cal-time">10:00</div>
+                            <div class="cal-cell"></div>
+                            <div class="cal-cell">
+                                <div class="event-block event-blue">
+                                    <div class="event-title">Bases de Données</div>
+                                    <div class="event-meta">Prof. Imane · B202</div>
+                                </div>
+                            </div>
+                            <div class="cal-cell">
+                                <div class="event-block event-green">
+                                    <div class="event-title">Réseaux</div>
+                                    <div class="event-meta">Prof. Omar · Lab 1</div>
+                                </div>
+                            </div>
+                            <div class="cal-cell">
+                                <div class="event-block event-blue">
+                                    <div class="event-title">Algo (TD)</div>
+                                    <div class="event-meta">Prof. Khalid · TD Room</div>
+                                </div>
+                            </div>
+                            <div class="cal-cell"></div>
+
+                            <div class="cal-cell cal-time">14:00</div>
+                            <div class="cal-cell">
+                                <div class="event-block event-orange">
+                                    <div class="event-title">Sécurité Web (TP)</div>
+                                    <div class="event-meta">Prof. Hamza · Lab 3</div>
+                                </div>
+                            </div>
+                            <div class="cal-cell">
+                                <div class="event-block event-green">
+                                    <div class="event-title">Cloud Computing</div>
+                                    <div class="event-meta">Prof. Sara · Cloud Lab</div>
+                                </div>
+                            </div>
+                            <div class="cal-cell"></div>
+                            <div class="cal-cell">
+                                <div class="event-block event-blue">
+                                    <div class="event-title">Projet Tuteuré</div>
+                                    <div class="event-meta">All Profs · Open Space</div>
+                                </div>
+                            </div>
+                            <div class="cal-cell"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================ 3. ABSENCES & OCR ================ -->
+            <section id="view-absences" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>📋 Absences & Justifications</h1>
+                        <p>Track attendance and process justification documents with AI-powered OCR</p>
+                    </div>
+                    <div style="display:flex;gap:0.5rem">
+                        <button class="btn btn-outline">📊 Statistics</button>
+                        <button class="btn btn-primary">📤 Export PDF</button>
+                    </div>
+                </div>
+
+                <div class="upload-zone">
+                    <div class="upload-icon">📎</div>
+                    <h3>Upload Medical Certificate or Justification</h3>
+                    <p>Drag & drop files here — AI will automatically extract dates, names, and type using OCR</p>
+                    <button class="btn btn-outline btn-sm">Browse Files</button>
+                </div>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(3,1fr); margin-bottom:1.5rem">
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-green">✅</div>
+                        </div>
+                        <div class="stat-value">1,198</div>
+                        <div class="stat-label">Present Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-red">❌</div>
+                        </div>
+                        <div class="stat-value">38</div>
+                        <div class="stat-label">Absent Today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-yellow">⏰</div>
+                        </div>
+                        <div class="stat-value">11</div>
+                        <div class="stat-label">Late Arrivals</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Recent Attendance Records</h2><button class="btn btn-ghost btn-sm">Filter ▾</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Date & Time</th>
+                                <th>Module</th>
+                                <th>Status</th>
+                                <th>Justification</th>
+                                <th>OCR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Ayoub E.</strong></td>
+                                <td>Today, 08:00</td>
+                                <td>Algorithmique</td>
+                                <td><span class="badge badge-danger badge-dot">Absent</span></td>
+                                <td><span class="badge badge-warning">Pending Review</span></td>
+                                <td><span class="badge badge-info">Processing...</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sara M.</strong></td>
+                                <td>Today, 10:15</td>
+                                <td>Bases de Données</td>
+                                <td><span class="badge badge-warning badge-dot">Late (15m)</span></td>
+                                <td>—</td>
+                                <td>—</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Hamza B.</strong></td>
+                                <td>Mon, 08:00</td>
+                                <td>Sécurité Web</td>
+                                <td><span class="badge badge-danger badge-dot">Absent</span></td>
+                                <td><span class="badge badge-success">Verified ✓</span></td>
+                                <td><span class="badge badge-success">Extracted ✓</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Kenza T.</strong></td>
+                                <td>Mon, 14:00</td>
+                                <td>Algorithmique</td>
+                                <td><span class="badge badge-success badge-dot">Present</span></td>
+                                <td>—</td>
+                                <td>—</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================ 4. PAYMENTS ================ -->
+            <section id="view-payments" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>💳 Payment Management</h1>
+                        <p>Track inscriptions, installments, and overdue alerts with OpenClaw automation</p>
+                    </div>
+                    <div style="display:flex;gap:0.5rem">
+                        <button class="btn btn-outline">🤖 Run Alert Workflow</button>
+                        <button class="btn btn-primary">+ Record Payment</button>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(3,1fr)">
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-green">💰</div>
+                        </div>
+                        <div class="stat-value">142</div>
+                        <div class="stat-label">Fully Paid</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-yellow">⚠️</div>
+                        </div>
+                        <div class="stat-value">58</div>
+                        <div class="stat-label">Partial Payment</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-red">🚨</div>
+                        </div>
+                        <div class="stat-value">23</div>
+                        <div class="stat-label">Overdue</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Payment Records</h2><button class="btn btn-ghost btn-sm">Export Excel →</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Bot Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Youssef L.</strong></td>
+                                <td>Inscription</td>
+                                <td>4,000 MAD</td>
+                                <td>15 Sept 2025</td>
+                                <td><span class="badge badge-success badge-dot">Paid</span></td>
+                                <td>—</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Kenza T.</strong></td>
+                                <td>Mensualité (Nov)</td>
+                                <td>2,500 MAD</td>
+                                <td>01 Nov 2025</td>
+                                <td><span class="badge badge-warning badge-dot">Partial (1,200 MAD)</span></td>
+                                <td>—</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Omar R.</strong></td>
+                                <td>Mensualité (Nov)</td>
+                                <td>2,500 MAD</td>
+                                <td>01 Nov 2025</td>
+                                <td><span class="badge badge-danger badge-dot">Overdue</span></td>
+                                <td><span class="badge badge-primary">🤖 WhatsApp Sent</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Fatima Z.</strong></td>
+                                <td>Mensualité (Dec)</td>
+                                <td>2,500 MAD</td>
+                                <td>01 Dec 2025</td>
+                                <td><span class="badge badge-danger badge-dot">Overdue</span></td>
+                                <td><span class="badge badge-primary">🤖 Telegram Sent</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================ 5. PROGRESS ================ -->
+            <section id="view-progress" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>📈 Academic Progress</h1>
+                        <p>Track module completion and chapter coverage per group</p>
+                    </div>
+                    <button class="btn btn-outline">Filter by Group ▾</button>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Group A — Semester 1</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="progress-row">
+                                <div class="progress-header"><span class="progress-title">Algorithmique</span><span
+                                        class="progress-pct pct-blue">82%</span></div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-blue" style="width:82%"></div>
+                                </div>
+                                <div class="progress-meta">Chapters: Variables, Loops, Arrays, Trees, Graphs</div>
+                            </div>
+                            <div class="progress-row">
+                                <div class="progress-header"><span class="progress-title">Bases de Données</span><span
+                                        class="progress-pct pct-green">68%</span></div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-green" style="width:68%"></div>
+                                </div>
+                                <div class="progress-meta">Chapters: SQL, Normalization, Joins, Indexes</div>
+                            </div>
+                            <div class="progress-row">
+                                <div class="progress-header"><span class="progress-title">Sécurité Web</span><span
+                                        class="progress-pct pct-orange">45%</span></div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-orange" style="width:45%"></div>
+                                </div>
+                                <div class="progress-meta">Chapters: OWASP Top 10, XSS, CSRF</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Group B — Semester 1</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="progress-row">
+                                <div class="progress-header"><span class="progress-title">Algorithmique</span><span
+                                        class="progress-pct pct-green">91%</span></div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-green" style="width:91%"></div>
+                                </div>
+                                <div class="progress-meta">Nearly complete — final chapter in progress</div>
+                            </div>
+                            <div class="progress-row">
+                                <div class="progress-header"><span class="progress-title">Cloud Computing</span><span
+                                        class="progress-pct pct-blue">55%</span></div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-blue" style="width:55%"></div>
+                                </div>
+                                <div class="progress-meta">AWS Intro, Docker, Kubernetes basics</div>
+                            </div>
+                            <div class="progress-row">
+                                <div class="progress-header"><span class="progress-title">Réseaux</span><span
+                                        class="progress-pct pct-orange">32%</span></div>
+                                <div class="progress-track">
+                                    <div class="progress-fill fill-orange" style="width:32%"></div>
+                                </div>
+                                <div class="progress-meta">OSI Model, TCP/IP</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================ 6. NOTIFICATIONS ================ -->
+            <section id="view-notifications" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>🔔 Notifications & OpenClaw Logs</h1>
+                        <p>All system automated actions, bot triggers, and IMAP email processing</p>
+                    </div>
+                    <button class="btn btn-primary">+ New Workflow</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Bot & Automation Timeline</h2><button class="btn btn-ghost btn-sm">Mark all read</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-icon bg-green">📨</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">Daily Planning Dispatched</div>
+                                    <div class="timeline-desc">Telegram bot sent planning to 12 teachers and 6 group
+                                        channels</div>
+                                    <div class="timeline-time">🕐 07:00 AM · <span
+                                            class="badge badge-success badge-dot">Cron Job</span></div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-icon bg-blue">📧</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">IMAP Email Received & Processed</div>
+                                    <div class="timeline-desc">From: etudiant@uemf.ac.ma — Subject: "Justificatif
+                                        absence 12/03" — Converted to internal notification</div>
+                                    <div class="timeline-time">🕐 08:15 AM · <span
+                                            class="badge badge-primary badge-dot">IMAP</span></div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-icon bg-yellow">💸</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">Payment Overdue Alert Triggered</div>
+                                    <div class="timeline-desc">WhatsApp Cloud API → 12 students notified about overdue
+                                        mensualités</div>
+                                    <div class="timeline-time">🕐 09:30 AM · <span
+                                            class="badge badge-warning badge-dot">Alert</span></div>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-icon bg-red">🚨</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">Absence Threshold Exceeded</div>
+                                    <div class="timeline-desc">Student: Omar R. — 5+ absences in Algorithmique. Email
+                                        sent to scolarité</div>
+                                    <div class="timeline-time">🕐 10:45 AM · <span
+                                            class="badge badge-danger badge-dot">Critical</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>🤖 Telegram Bot Commands Log</h2>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Command</th>
+                                <th>Response</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Prof. Khalid</td>
+                                <td><code>/today</code></td>
+                                <td>Planning sent (3 sessions)</td>
+                                <td>07:05 AM</td>
+                            </tr>
+                            <tr>
+                                <td>Sara M. (Student)</td>
+                                <td><code>/absence</code></td>
+                                <td>1 absence this month, 0 unjustified</td>
+                                <td>09:20 AM</td>
+                            </tr>
+                            <tr>
+                                <td>Ayoub E. (Student)</td>
+                                <td><code>/progress</code></td>
+                                <td>Algo: 82%, DB: 68%, SecWeb: 45%</td>
+                                <td>11:00 AM</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================ 7. USERS & ROLES ================ -->
+            <section id="view-users" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>👥 Users & Access Control</h1>
+                        <p>Manage accounts, roles, and permissions (JWT + bcrypt secured)</p>
+                    </div>
+                    <button class="btn btn-primary">+ Invite User</button>
+                </div>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(4,1fr)">
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-red">👑</div>
+                        </div>
+                        <div class="stat-value">2</div>
+                        <div class="stat-label">Admins</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-yellow">📝</div>
+                        </div>
+                        <div class="stat-value">5</div>
+                        <div class="stat-label">Scolarité</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-blue">🎓</div>
+                        </div>
+                        <div class="stat-value">32</div>
+                        <div class="stat-label">Enseignants</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon bg-green">🏫</div>
+                        </div>
+                        <div class="stat-value">1,247</div>
+                        <div class="stat-label">Étudiants</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>User Directory</h2><button class="btn btn-ghost btn-sm">Export →</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Branch</th>
+                                <th>Status</th>
+                                <th>Linked</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Admin Root</strong></td>
+                                <td>admin@uemf.ac.ma</td>
+                                <td><span class="badge badge-danger">Admin</span></td>
+                                <td>All</td>
+                                <td><span class="badge badge-success badge-dot">Active</span></td>
+                                <td>—</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Prof. Hamza K.</strong></td>
+                                <td>h.khchichine@uemf.ac.ma</td>
+                                <td><span class="badge badge-primary">Enseignant</span></td>
+                                <td>Informatique</td>
+                                <td><span class="badge badge-success badge-dot">Active</span></td>
+                                <td>📱 Telegram</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Bureau Scolarité 1</strong></td>
+                                <td>scolarite1@uemf.ac.ma</td>
+                                <td><span class="badge badge-warning">Scolarité</span></td>
+                                <td>Sciences</td>
+                                <td><span class="badge badge-success badge-dot">Active</span></td>
+                                <td>📧 Email</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sara M.</strong></td>
+                                <td>s.m@etu.uemf.ac.ma</td>
+                                <td><span class="badge badge-info">Étudiant</span></td>
+                                <td>Informatique</td>
+                                <td><span class="badge badge-success badge-dot">Active</span></td>
+                                <td>📱 Telegram + WhatsApp</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ================ 8. SETTINGS ================ -->
+            <section id="view-settings" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>⚙️ System Settings</h1>
+                        <p>Configure branches, API keys, integrations, and notification channels</p>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>🏢 Branch Configuration</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline-item" style="border:none;padding:0.5rem 0">
+                                <div class="timeline-icon bg-blue">🏛️</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">Informatique & Sciences</div>
+                                    <div class="timeline-desc">Location: Bâtiment A · 4 groups · 340 students</div>
+                                </div>
+                            </div>
+                            <div class="timeline-item" style="border:none;padding:0.5rem 0">
+                                <div class="timeline-icon bg-green">🏛️</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">Management & Business</div>
+                                    <div class="timeline-desc">Location: Bâtiment B · 6 groups · 520 students</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>🔌 Integrations Status</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline-item" style="border:none;padding:0.5rem 0">
+                                <div class="timeline-icon bg-green">🤖</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">OpenClaw Orchestrator</div>
+                                    <div class="timeline-desc">3 active workflows · Last run: 09:30 AM</div>
+                                    <div class="timeline-time"><span
+                                            class="badge badge-success badge-dot">Connected</span></div>
+                                </div>
+                            </div>
+                            <div class="timeline-item" style="border:none;padding:0.5rem 0">
+                                <div class="timeline-icon bg-blue">📱</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">Telegram Bot (@CampusOpsBot)</div>
+                                    <div class="timeline-desc">Linked users: 187 · Commands today: 42</div>
+                                    <div class="timeline-time"><span class="badge badge-success badge-dot">Online</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="timeline-item" style="border:none;padding:0.5rem 0">
+                                <div class="timeline-icon bg-green">💬</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">WhatsApp Cloud API</div>
+                                    <div class="timeline-desc">Messages sent today: 14</div>
+                                    <div class="timeline-time"><span class="badge badge-success badge-dot">Active</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="timeline-item" style="border:none;padding:0.5rem 0">
+                                <div class="timeline-icon bg-yellow">📧</div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">IMAP / SMTP (Email)</div>
+                                    <div class="timeline-desc">Last sync: 2 min ago · mail.uemf.ac.ma</div>
+                                    <div class="timeline-time"><span class="badge badge-success badge-dot">Synced</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div><!-- /content-area -->
+    </main>
+
+    <script>
+        // ===== Theme Toggle =====
+        const toggle = document.getElementById('themeToggle');
+        const saved = localStorage.getItem('campusops-theme');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.body.classList.add('dark-mode');
+        }
+        toggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('campusops-theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        });
+
+        // ===== Sidebar Navigation =====
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', e => {
+                e.preventDefault();
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                const target = item.getAttribute('data-target');
+                document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+                const el = document.getElementById(target);
+                if (el) { el.style.animation = 'none'; el.offsetHeight; el.style.animation = null; el.classList.add('active'); }
+            });
+        });
+
+        // ===== Sparkline Charts (Mini bar) =====
+        function makeSpark(id, data, color) {
+            const c = document.getElementById(id);
+            if (!c) return;
+            const max = Math.max(...data);
+            data.forEach((v, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'spark-bar';
+                bar.style.height = '0%';
+                bar.style.background = color;
+                bar.style.opacity = 0.3 + (v / max) * 0.7;
+                c.appendChild(bar);
+                setTimeout(() => { bar.style.height = (v / max * 100) + '%'; }, 200 + i * 60);
+            });
+        }
+        makeSpark('spark1', [40, 55, 48, 65, 72, 80, 85, 78, 90, 82, 88, 95], 'var(--primary)');
+        makeSpark('spark2', [88, 90, 85, 92, 95, 93, 96, 91, 94, 97, 96, 96], 'var(--accent)');
+        makeSpark('spark3', [12, 15, 18, 22, 20, 25, 23, 19, 21, 24, 22, 23], 'var(--warning)');
+        makeSpark('spark4', [5, 8, 10, 12, 9, 14, 11, 13, 15, 10, 12, 14], 'var(--danger)');
+    </script>
+</body>
+
+</html>
