@@ -197,14 +197,12 @@ API is documented               →    Swagger UI at /api/docs
 
 ## 📋 What's Next
 
-| Phase | What | Status |
-|-------|------|--------|
 | ~~Phase 1~~ | ~~Scaffolding & Infrastructure~~ | ✅ Done |
 | ~~Phase 2~~ | ~~Database & Models~~ | ✅ Done |
 | ~~Phase 3~~ | ~~Authentication & Security~~ | ✅ Done |
 | ~~Phase 4~~ | ~~Core CRUD APIs (50+ endpoints)~~ | ✅ Done |
-| **Phase 5** | **Frontend Dashboard** (React + Vite) | ⬜ Next |
-| Phase 6 | Integrations (Telegram Bot, Email, OpenClaw) | ⬜ |
+| ~~Phase 5~~ | ~~Frontend Dashboard Integration~~ | ✅ Done |
+| **Phase 6** | **Integrations (Telegram Bot, Email, OpenClaw)** | ⬜ Next |
 | Phase 7 | API Documentation & Testing | ⬜ |
 | Phase 8 | Cloud Deployment & Demo | ⬜ |
 

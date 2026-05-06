@@ -99,7 +99,7 @@ function Topbar({ role, onRole, onLogout, onNav, unread, notifOpen, setNotifOpen
         )}
       </div>
 
-      <button className="tb-btn" title="Help">?</button>
+      <button className="tb-btn" title="Help" onClick={()=>alert('CampusOps v1.0\nAcademic Platform\n\nKeyboard shortcuts:\n• Ctrl+K — Search\n• Esc — Close drawer\n\nSupport: support@campusops.ma')}>?</button>
 
       <div ref={pRef} style={{position:'relative'}}>
         <div className="tb-role" onClick={()=>{setProfOpen(!profOpen);setNotifOpen(false);}}>

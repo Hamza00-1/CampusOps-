@@ -245,6 +245,11 @@ export class AuthService {
                 branch: {
                     select: { name: true, location: true },
                 },
+                studentGroups: {
+                    select: {
+                        group: { select: { id: true, name: true } },
+                    },
+                },
             },
         });
 

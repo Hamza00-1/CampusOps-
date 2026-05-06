@@ -7,7 +7,12 @@ function Modules({ role, toast }) {
       <div className="page-head">
         <div><h1>Modules</h1><div className="sub">Academic modules catalog — {MODULES.length} modules · 29 total credits</div></div>
         <div className="page-actions">
-          {role==='admin' && <button className="btn btn-primary btn-sm" onClick={()=>toast({title:'New module'})}>+ New module</button>}
+          {role==='admin' && <button className="btn btn-primary btn-sm" onClick={async()=>{
+            const name = prompt('Module name:'); if(!name) return;
+            const branchId = (BRANCHES[0]||{}).id || prompt('Branch ID (UUID):'); if(!branchId) return;
+            try { await window.api.request('/modules',{method:'POST',body:{name, branchId}}); toast({title:'Module created',type:'success'}); window.location.reload(); }
+            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
+          }}>+ New module</button>}
         </div>
       </div>
       <div className="grid-3">
@@ -21,7 +26,7 @@ function Modules({ role, toast }) {
                   <div style={{fontSize:11,fontFamily:'ui-monospace',fontWeight:700,color:m.color,letterSpacing:0.4}}>{m.code}</div>
                   <div style={{fontSize:15,fontWeight:700,marginTop:3,fontFamily:'var(--head-font)'}}>{m.name}</div>
                 </div>
-                <button className="tb-btn" style={{width:28,height:28,fontSize:14}}>⋯</button>
+                <button className="tb-btn" style={{width:28,height:28,fontSize:14}} onClick={()=>toast({title:m.name,desc:`${m.code} · ${m.credits} credits · Prof. ${m.teacher} · ${students} students · ${prog}% complete`,type:'info'})}>⋯</button>
               </div>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
                 <div className="av av-xs" style={{background:m.color}}>{m.teacher.split(' ').slice(-2).map(p=>p[0]).join('')}</div>
@@ -53,7 +58,7 @@ function Progress({ role }) {
   const overall = (modGrades.reduce((a,m)=>a+m.g,0)/modGrades.length).toFixed(2);
   return (
     <>
-      <div className="page-head"><div><h1>My progress</h1><div className="sub">Semester 1 · 2024-25</div></div><div className="page-actions"><button className="btn btn-ghost btn-sm">⤓ Transcript</button></div></div>
+      <div className="page-head"><div><h1>My progress</h1><div className="sub">Semester 1 · 2024-25</div></div><div className="page-actions"><button className="btn btn-ghost btn-sm" onClick={()=>{const w=window.open('','_blank','width=600,height=700');w.document.write(`<html><head><title>Transcript</title><style>body{font-family:sans-serif;padding:30px;max-width:550px;margin:auto}h2{color:#5FA83C;border-bottom:2px solid #5FA83C;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #eee}th{background:#f8f9fa;font-size:12px;text-transform:uppercase}td:last-child{text-align:right;font-weight:700}.avg{font-size:20px;font-weight:800;color:#5FA83C;text-align:center;margin:20px}</style></head><body><h2>CampusOps — Academic Transcript</h2><p>Student: <b>${ROLES[role]?.name||'Student'}</b><br>Semester 1 · 2024-25</p><table><tr><th>Code</th><th>Module</th><th>Grade</th></tr>${modGrades.map(m=>`<tr><td>${m.m}</td><td>${m.n}</td><td>${m.g}/20</td></tr>`).join('')}</table><div class='avg'>Overall: ${overall}/20</div><br><button onclick='window.print()'>Print Transcript</button></body></html>`);w.document.close()}}>⤓ Transcript</button></div></div>
       <div className="grid-4" style={{marginBottom:14}}>
         <div className="stat">
           <div className="stat-h"><div className="stat-ic" style={{background:'var(--green-50)',color:'var(--green-600)'}}>◴</div></div>
@@ -110,7 +115,15 @@ function Users({ toast }) {
     <>
       <div className="page-head">
         <div><h1>Users</h1><div className="sub">Manage platform accounts & permissions</div></div>
-        <div className="page-actions"><button className="btn btn-ghost btn-sm">⤓ Export</button><button className="btn btn-primary btn-sm" onClick={()=>toast({title:'Invite user'})}>+ Invite user</button></div>
+        <div className="page-actions"><button className="btn btn-ghost btn-sm" onClick={()=>{const rows=['Name,Email,Role,Branch,Status',...USERS_LIST.map(u=>`${u.name},${u.email},${u.role},${u.branch},${u.status}`)];const b=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='users.csv';a.click();}}>⤓ Export</button><button className="btn btn-primary btn-sm" onClick={async()=>{
+            const name = prompt('Full name:'); if(!name) return;
+            const email = prompt('Email:'); if(!email) return;
+            const roleVal = prompt('Role (Admin/Scolarite/Enseignant/Etudiant):','Etudiant'); if(!roleVal) return;
+            const branchId = (BRANCHES[0]||{}).id || prompt('Branch ID:'); if(!branchId) return;
+            const password = prompt('Password (min 8 chars, 1 upper, 1 lower, 1 digit, 1 special):','Welcome1!'); if(!password) return;
+            try { await window.api.request('/users',{method:'POST',body:{name,email,password,role:roleVal,branchId}}); toast({title:'User created',type:'success'}); window.location.reload(); }
+            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
+          }}>+ Invite user</button></div>
       </div>
       <div className="grid-4" style={{marginBottom:14}}>
         <StatCard label="Total accounts" value="42" icon="◍" color="blue" trend="up" delta="+3"/>
@@ -132,11 +145,15 @@ function Users({ toast }) {
             {list.map(u => (
               <tr key={u.id}>
                 <td><div style={{display:'flex',alignItems:'center',gap:10}}><div className="av av-sm" style={{background:u.color}}>{u.init}</div><div><div style={{fontWeight:600}}>{u.name}</div><div style={{fontSize:11,color:'var(--text-3)',fontFamily:'ui-monospace'}}>{u.id}</div></div></div></td>
-                <td><span className="badge blue">{ROLES[u.role].label}</span></td>
+                <td><span className="badge blue">{(ROLES[u.role]||{label:u.role}).label}</span></td>
                 <td style={{color:'var(--text-2)'}}>{u.branch}</td>
                 <td style={{color:'var(--text-2)',fontSize:12.5}}>{u.email}</td>
                 <td><span className={`pill ${u.status==='active'?'paid':'overdue'}`}><span className="d"/>{u.status}</span></td>
-                <td style={{textAlign:'right'}}><button className="btn btn-ghost btn-sm" style={{padding:'4px 10px'}}>Edit</button></td>
+                <td style={{textAlign:'right'}}><button className="btn btn-ghost btn-sm" style={{padding:'4px 10px'}} onClick={async()=>{
+                  const newName = prompt('Edit name:',u.name); if(!newName) return;
+                  try { await window.api.request(`/users/${u.id}`,{method:'PUT',body:{name:newName}}); toast({title:'User updated',type:'success'}); window.location.reload(); }
+                  catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
+                }}>Edit</button></td>
               </tr>
             ))}
           </tbody>
@@ -151,7 +168,13 @@ function Groups({ toast }) {
     <>
       <div className="page-head">
         <div><h1>Groups</h1><div className="sub">Manage class groups & enrollments</div></div>
-        <div className="page-actions"><button className="btn btn-primary btn-sm" onClick={()=>toast({title:'New group'})}>+ New group</button></div>
+        <div className="page-actions"><button className="btn btn-primary btn-sm" onClick={async()=>{
+            const name = prompt('Group name:'); if(!name) return;
+            const branchId = (BRANCHES[0]||{}).id || prompt('Branch ID (UUID):'); if(!branchId) return;
+            const academicYear = prompt('Academic year (e.g. 2025/2026):','2025/2026'); if(!academicYear) return;
+            try { await window.api.request('/groups',{method:'POST',body:{name,branchId,academicYear}}); toast({title:'Group created',type:'success'}); window.location.reload(); }
+            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
+          }}>+ New group</button></div>
       </div>
       <div className="grid-3">
         {GROUPS_LIST.map(g => {
@@ -170,8 +193,20 @@ function Groups({ toast }) {
                 <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.6,fontWeight:700}}>Branch</div><div style={{fontSize:12.5,fontWeight:600,marginTop:3}}>{g.branch}</div></div>
               </div>
               <div style={{display:'flex',gap:6}}>
-                <button className="btn btn-ghost btn-sm" style={{flex:1}}>View</button>
-                <button className="btn btn-primary btn-sm" style={{flex:1}}>Manage</button>
+                <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={async()=>{
+                  try{const res=await window.api.request(`/groups/${g.id}`);const d=res.data;const stuList=(d.students||[]).map(s=>s.student?.name||'?').join(', ')||'No students enrolled';toast({title:g.name,desc:`${g.students} students: ${stuList}`,type:'info'});}
+                  catch(err){toast({title:g.name,desc:`${g.students} students · ${g.branch}`,type:'info'});}
+                }}>View</button>
+                <button className="btn btn-primary btn-sm" style={{flex:1}} onClick={async()=>{
+                  const action=prompt('Enroll or Remove? (type "enroll" or "remove"):','enroll');
+                  if(!action) return;
+                  const studentId=prompt('Student ID (UUID):'); if(!studentId) return;
+                  try{
+                    if(action.toLowerCase()==='remove'){await window.api.request(`/groups/${g.id}/students`,{method:'DELETE',body:{studentId}});toast({title:'Student removed',type:'success'});}
+                    else{await window.api.request(`/groups/${g.id}/students`,{method:'POST',body:{studentId}});toast({title:'Student enrolled',type:'success'});}
+                    window.location.reload();
+                  }catch(err){toast({title:'Error',desc:err.message,type:'error'});}
+                }}>Manage</button>
               </div>
             </div>
           );
@@ -186,7 +221,12 @@ function Branches({ toast }) {
     <>
       <div className="page-head">
         <div><h1>Branches</h1><div className="sub">Academic departments & programs</div></div>
-        <div className="page-actions"><button className="btn btn-primary btn-sm" onClick={()=>toast({title:'New branch'})}>+ New branch</button></div>
+        <div className="page-actions"><button className="btn btn-primary btn-sm" onClick={async()=>{
+            const name = prompt('Branch name:'); if(!name) return;
+            const location = prompt('Location:','UEMF Campus, Fès'); if(!location) return;
+            try { await window.api.request('/branches',{method:'POST',body:{name,location}}); toast({title:'Branch created',type:'success'}); window.location.reload(); }
+            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
+          }}>+ New branch</button></div>
       </div>
       <div className="grid-2">
         {BRANCHES.map(b => (
@@ -202,7 +242,10 @@ function Branches({ toast }) {
               <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.8,fontWeight:700}}>Students</div><div style={{fontSize:22,fontWeight:800,fontFamily:'var(--head-font)',color:b.color}}>{b.students}</div></div>
               <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.8,fontWeight:700}}>Groups</div><div style={{fontSize:22,fontWeight:800,fontFamily:'var(--head-font)'}}>{b.groups}</div></div>
             </div>
-            <button className="btn btn-ghost btn-sm" style={{width:'100%'}}>View details →</button>
+            <button className="btn btn-ghost btn-sm" style={{width:'100%'}} onClick={async()=>{
+              try{const res=await window.api.request(`/branches/${b.id||b.code}`);const d=res.data;toast({title:b.name,desc:`Location: ${d.location||'—'} · ${b.students} students · ${b.groups} groups`,type:'info'});}
+              catch(err){toast({title:b.name,desc:`${b.students} students · ${b.groups} groups`,type:'info'});}
+            }}>View details →</button>
           </div>
         ))}
       </div>
@@ -218,7 +261,10 @@ function Notifications({ toast }) {
     <>
       <div className="page-head">
         <div><h1>Notifications</h1><div className="sub">{unread} unread · {NOTIFICATIONS.length} total</div></div>
-        <div className="page-actions"><button className="btn btn-ghost btn-sm" onClick={()=>toast({title:'All marked read',type:'success'})}>Mark all read</button></div>
+        <div className="page-actions"><button className="btn btn-ghost btn-sm" onClick={async()=>{
+            try { await window.api.request('/notifications/read-all',{method:'PUT'}); toast({title:'All marked read',type:'success'}); NOTIFICATIONS.forEach(n=>n.read=true); }
+            catch(err){ toast({title:'Marked read locally',type:'info'}); NOTIFICATIONS.forEach(n=>n.read=true); }
+          }}>Mark all read</button></div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'220px 1fr',gap:14}}>
         <div className="card" style={{padding:12,height:'fit-content'}}>
@@ -277,7 +323,7 @@ function Settings({ role, onLogout }) {
             <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:14}}>Profile</div>
             <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:18}}>
               <div className="av av-md" style={{background:user.color,width:64,height:64,fontSize:20}}>{user.name.split(' ').map(p=>p[0]).slice(0,2).join('')}</div>
-              <div><div style={{fontSize:15,fontWeight:700}}>{user.name}</div><div style={{fontSize:12,color:'var(--text-2)'}}>{user.email}</div><button className="btn btn-ghost btn-sm" style={{marginTop:8}}>Upload photo</button></div>
+              <div><div style={{fontSize:15,fontWeight:700}}>{user.name}</div><div style={{fontSize:12,color:'var(--text-2)'}}>{user.email}</div><button className="btn btn-ghost btn-sm" style={{marginTop:8}} onClick={()=>toast({title:'Upload photo',desc:'Photo upload coming in v2 — avatars use initials for now',type:'info'})}>Upload photo</button></div>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
               <div className="field"><label>Full name</label><input defaultValue={user.name}/></div>
@@ -295,11 +341,16 @@ function Settings({ role, onLogout }) {
             </div>
             <div className="setting-row">
               <div><div className="t">Password</div><div className="s">Last changed 42 days ago.</div></div>
-              <button className="btn btn-ghost btn-sm">Change</button>
+              <button className="btn btn-ghost btn-sm" onClick={async()=>{
+                const cur = prompt('Current password:'); if(!cur) return;
+                const np = prompt('New password (8+ chars, 1 upper, 1 lower, 1 digit, 1 special):'); if(!np) return;
+                try { await window.api.request('/auth/change-password',{method:'PUT',body:{currentPassword:cur,newPassword:np}}); toast({title:'Password changed',type:'success'}); }
+                catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
+              }}>Change</button>
             </div>
             <div className="setting-row">
               <div><div className="t">Active sessions</div><div className="s">2 devices currently signed in.</div></div>
-              <button className="btn btn-ghost btn-sm">Review</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>toast({title:'Active sessions',desc:'1. This browser — current session\n2. Mobile app — last active 2h ago',type:'info'})}>Review</button>
             </div>
           </div>
 

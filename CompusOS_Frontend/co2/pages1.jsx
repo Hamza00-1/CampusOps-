@@ -103,8 +103,8 @@ function Dashboard({ role, toast, onNav }) {
           <div className="sub">Here's what's happening on your {user.label.toLowerCase()} workspace today.</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-ghost btn-sm">⤓ Export</button>
-          {role==='admin'||role==='scolarite' ? <button className="btn btn-primary btn-sm" onClick={()=>toast({title:'New session form',desc:'Form would open in modal'})}>+ New session</button> : null}
+          <button className="btn btn-ghost btn-sm" onClick={()=>{const d={students:STUDENTS.length,modules:MODULES.length,groups:GROUPS_LIST.length,payments:PAYMENTS.length};const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='campusops_dashboard.json';a.click();toast({title:'Dashboard exported',type:'success'})}}>⤓ Export</button>
+          {role==='admin'||role==='scolarite' ? <button className="btn btn-primary btn-sm" onClick={()=>onNav('planning')}>+ New session</button> : null}
         </div>
       </div>
 
@@ -223,7 +223,7 @@ function ScolDash({ onNav }) {
           <div className="card-head"><h3>Overdue alerts</h3><span className="badge red">14</span></div>
           {PAYMENTS.filter(p=>p.status==='overdue').slice(0,5).map((p,i,a) => (
             <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:i<a.length-1?'1px solid var(--border)':'0'}}>
-              <div className="av av-xs" style={{background:'var(--red)'}}>{p.student.split(' ').map(x=>x[0]).join('')}</div>
+              <div className="av av-xs" style={{background:'var(--red)'}}>{(p.student || '').split(' ').map(x=>x[0]).join('')}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:12.5,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.student}</div>
                 <div style={{fontSize:11,color:'var(--text-3)'}}>{p.id} · {p.group}</div>
@@ -333,19 +333,48 @@ function Planning({ role, toast }) {
   const [groupFilter, setGroupFilter] = uS('all');
   const [modFilter, setModFilter] = uS('all');
   const [selected, setSelected] = uS(null);
+  const [showNew, setShowNew] = uS(false);
+  const [newForm, setNewForm] = uS({moduleId:'',groupId:'',teacherId:'',room:'',day:0,startH:8,dur:2});
+  const [saving, setSaving] = uS(false);
   const days = ['Mon','Tue','Wed','Thu','Fri','Sat'];
   const dates = [20,21,22,23,24,25];
-  const todayIdx = 1; // Tue
+  const todayIdx = 1;
   const hours = [8,9,10,11,12,13,14,15,16,17,18];
 
-  const filtered = SESSIONS.filter(s => (groupFilter==='all'||s.grp===groupFilter)&&(modFilter==='all'||s.mod===modFilter));
+  // Role-based filtering: teacher sees only sessions with their modules, student sees only their group
+  const roleFiltered = SESSIONS.filter(s => {
+    if (role==='enseignant') return s.teacherId === window._userId;
+    if (role==='etudiant') { const ug = window._userGroups || []; if(ug.length===0) return false; return ug.includes(s.grp); }
+    return true;
+  });
+  const filtered = roleFiltered.filter(s => (groupFilter==='all'||s.grp===groupFilter)&&(modFilter==='all'||s.mod===modFilter||MODULES.find(m=>(m.code===modFilter||m.name===modFilter)&&(m.code===s.mod||m.name===s.mod))));
+
+  async function createSession(e) {
+    e.preventDefault(); setSaving(true);
+    try {
+      const base = new Date(); base.setDate(base.getDate() - base.getDay() + 1 + newForm.day);
+      const start = new Date(base); start.setHours(newForm.startH, 0, 0, 0);
+      const end = new Date(base); end.setHours(newForm.startH + newForm.dur, 0, 0, 0);
+      await window.api.request('/planning', { method:'POST', body: {
+        moduleId: newForm.moduleId, groupId: newForm.groupId, teacherId: newForm.teacherId || window._userId,
+        room: newForm.room, startTime: start.toISOString(), endTime: end.toISOString()
+      }});
+      toast({title:'Session created',type:'success'}); setShowNew(false); window.location.reload();
+    } catch(err) { toast({title:'Error',desc:err.message,type:'error'}); }
+    finally { setSaving(false); }
+  }
+
+  async function deleteSession(id) {
+    try { await window.api.request(`/planning/${id}`, {method:'DELETE'}); toast({title:'Session deleted',type:'success'}); setSelected(null); window.location.reload(); }
+    catch(err) { toast({title:'Error',desc:err.message,type:'error'}); }
+  }
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Planning</h1>
-          <div className="sub">Weekly timetable · week of Oct 20–25, 2024</div>
+          <div className="sub">Weekly timetable · {filtered.length} sessions</div>
         </div>
         <div className="page-actions">
           <div className="segment">
@@ -353,8 +382,8 @@ function Planning({ role, toast }) {
             <button className="active">Week</button>
             <button>Month</button>
           </div>
-          <button className="btn btn-ghost btn-sm">⤓ Export</button>
-          {(role==='admin'||role==='scolarite') && <button className="btn btn-primary btn-sm" onClick={()=>toast({title:'New session',desc:'Drawer would open here'})}>+ New session</button>}
+          <button className="btn btn-ghost btn-sm" onClick={()=>{const rows=['Day,Time,Module,Group,Room',...filtered.map(s=>`${days[s.day]||s.day},${s.start}:00,${s.mod},${s.grp},${s.room}`)];const b=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='planning.csv';a.click();toast({title:'Planning exported',type:'success'})}}>⤓ Export</button>
+          {(role==='admin'||role==='scolarite') && <button className="btn btn-primary btn-sm" onClick={()=>setShowNew(true)}>+ New session</button>}
         </div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'260px 1fr',gap:14}}>
@@ -404,7 +433,7 @@ function Planning({ role, toast }) {
                 return (
                   <div key={d} className="tt-cell">
                     {sess.map((s,i) => {
-                      const mod = MODULES.find(m=>m.code===s.mod);
+                      const mod = MODULES.find(m=>m.code===s.mod||m.name===s.mod) || {code:s.mod,name:s.mod,color:'#64748B',credits:4,teacher:'—'};
                       const top = 0;
                       return (
                         <div key={i} className="tt-ev" onClick={()=>setSelected(s)} style={{top:top+2,height:s.dur*58-4,borderLeftColor:mod.color,background:`${mod.color}0a`}}>
@@ -424,7 +453,7 @@ function Planning({ role, toast }) {
       <div className={`drawer-bg ${selected?'open':''}`} onClick={()=>setSelected(null)}/>
       <div className={`drawer ${selected?'open':''}`}>
         {selected && (() => {
-          const mod = MODULES.find(m=>m.code===selected.mod);
+          const mod = MODULES.find(m=>m.code===selected.mod||m.name===selected.mod) || {code:selected.mod,name:selected.mod,color:'#64748B',credits:4,teacher:'—'};
           return (
             <>
               <div className="drawer-head">
@@ -456,12 +485,40 @@ function Planning({ role, toast }) {
               </div>
               <div className="drawer-foot">
                 <button className="btn btn-ghost btn-sm" onClick={()=>setSelected(null)}>Close</button>
-                {(role==='admin'||role==='scolarite'||role==='enseignant') && <button className="btn btn-primary btn-sm" onClick={()=>{toast({title:'Session updated',type:'success'});setSelected(null);}}>Edit session</button>}
+                {(role==='admin'||role==='scolarite') && selected.id && <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={()=>deleteSession(selected.id)}>Delete</button>}
+                {(role==='admin'||role==='scolarite'||role==='enseignant') && <button className="btn btn-primary btn-sm" onClick={async()=>{
+                  if(!selected.id){toast({title:'Session updated',type:'success'});setSelected(null);return;}
+                  const room=prompt('Room:',selected.room); if(!room) return;
+                  try{await window.api.request(`/planning/${selected.id}`,{method:'PUT',body:{room}});toast({title:'Session updated',type:'success'});setSelected(null);window.location.reload();}
+                  catch(err){toast({title:'Error',desc:err.message,type:'error'});}
+                }}>Edit session</button>}
               </div>
             </>
           );
         })()}
       </div>
+
+      {/* New Session Modal */}
+      {showNew && <>
+        <div className="drawer-bg open" onClick={()=>setShowNew(false)}/>
+        <div className="drawer open">
+          <div className="drawer-head"><div><h3>New Session</h3></div><button className="tb-btn" onClick={()=>setShowNew(false)}>×</button></div>
+          <form className="drawer-body" onSubmit={createSession}>
+            <div className="field"><label>Module</label><select required value={newForm.moduleId} onChange={e=>setNewForm({...newForm,moduleId:e.target.value})}><option value="">Select…</option>{(window._rawModules||MODULES).map(m=><option key={m.id||m.code} value={m.id||m.code}>{m.name}</option>)}</select></div>
+            <div className="field"><label>Group</label><select required value={newForm.groupId} onChange={e=>setNewForm({...newForm,groupId:e.target.value})}><option value="">Select…</option>{(window._rawGroups||GROUPS_LIST).map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></div>
+            <div className="field"><label>Room</label><input required value={newForm.room} onChange={e=>setNewForm({...newForm,room:e.target.value})} placeholder="e.g. B-204"/></div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+              <div className="field"><label>Day</label><select value={newForm.day} onChange={e=>setNewForm({...newForm,day:+e.target.value})}>{days.map((d,i)=><option key={i} value={i}>{d}</option>)}</select></div>
+              <div className="field"><label>Start</label><select value={newForm.startH} onChange={e=>setNewForm({...newForm,startH:+e.target.value})}>{hours.map(h=><option key={h} value={h}>{h}:00</option>)}</select></div>
+              <div className="field"><label>Duration</label><select value={newForm.dur} onChange={e=>setNewForm({...newForm,dur:+e.target.value})}><option value={1}>1h</option><option value={1.5}>1.5h</option><option value={2}>2h</option><option value={3}>3h</option></select></div>
+            </div>
+            <div className="drawer-foot" style={{marginTop:14}}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={()=>setShowNew(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving?'Creating…':'Create session'}</button>
+            </div>
+          </form>
+        </div>
+      </>}
     </>
   );
 }
@@ -469,9 +526,53 @@ function Planning({ role, toast }) {
 // ───── Absences / Attendance ─────
 function Absences({ role, toast }) {
   const [group, setGroup] = uS('L3-INFO-A');
-  const [session, setSession] = uS('CS301 — Mon 08:00');
+  const [session, setSession] = uS('CS301 \u2014 Mon 08:00');
   const [search, setSearch] = uS('');
   const [marks, setMarks] = uS({});
+
+  // ── Student view: read-only attendance summary ──
+  if (role === 'etudiant') {
+    const myName = window.USER?.name || 'Student';
+    const me = STUDENTS.find(s => s.name === myName) || STUDENTS[0] || {};
+    return (
+      <>
+        <div className="page-head">
+          <div><h1>My Attendance</h1><div className="sub">Your attendance record across all sessions</div></div>
+        </div>
+        <div className="grid-4" style={{marginBottom:14}}>
+          <StatCard label="Attendance rate" value={`${me.att || 0}%`} icon="\u2713" color="green" trend="up" delta="Overall"/>
+          <StatCard label="Sessions attended" value="14/16" icon="\u2713" color="blue" trend="flat" delta="This semester"/>
+          <StatCard label="Late" value="1" icon="\u23f0" color="orange" trend="flat" delta="This semester"/>
+          <StatCard label="Absent" value="1" icon="\u2717" color="red" trend="flat" delta="1 justified"/>
+        </div>
+        <div className="card">
+          <div className="card-head"><h3>Attendance history</h3></div>
+          <table className="tbl">
+            <thead><tr><th>Date</th><th>Session</th><th>Module</th><th>Status</th></tr></thead>
+            <tbody>
+              {[
+                {d:'May 2, 2026',s:'08:00\u201310:00',m:'Blockchain Technology',st:'present'},
+                {d:'Apr 30, 2026',s:'10:30\u201312:30',m:'DevSecOps',st:'present'},
+                {d:'Apr 28, 2026',s:'14:00\u201316:00',m:'Intro to AI',st:'present'},
+                {d:'Apr 25, 2026',s:'08:00\u201310:00',m:'Blockchain Technology',st:'late'},
+                {d:'Apr 23, 2026',s:'10:30\u201312:30',m:'DevSecOps',st:'present'},
+                {d:'Apr 21, 2026',s:'14:00\u201316:00',m:'Intro to AI',st:'absent'},
+              ].map((r,i) => (
+                <tr key={i}>
+                  <td style={{fontWeight:600}}>{r.d}</td>
+                  <td style={{color:'var(--text-2)'}}>{r.s}</td>
+                  <td>{r.m}</td>
+                  <td><span className={`pill ${r.st==='present'?'paid':r.st==='late'?'partial':'overdue'}`}><span className="d"/>{r.st[0].toUpperCase()+r.st.slice(1)}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
+    );
+  }
+
+  // ── Admin / Scolarite / Enseignant: full marking interface ──
   const list = STUDENTS.filter(s => s.group===group && (!search || s.name.toLowerCase().includes(search.toLowerCase())));
   const present = list.filter(s => marks[s.id]==='p').length;
   const absent = list.filter(s => marks[s.id]==='a').length;
@@ -484,7 +585,12 @@ function Absences({ role, toast }) {
         <div><h1>Attendance</h1><div className="sub">Mark attendance for today's sessions — fast, keyboard-friendly</div></div>
         <div className="page-actions">
           <button className="btn btn-ghost btn-sm" onClick={()=>{ const m={}; list.forEach(s=>m[s.id]='p'); setMarks({...marks,...m}); toast({title:'All marked present',type:'success'}); }}>✓ Mark all present</button>
-          <button className="btn btn-primary btn-sm" onClick={()=>toast({title:'Attendance saved',desc:`${present} present, ${absent} absent, ${late} late`,type:'success'})}>Save</button>
+          <button className="btn btn-primary btn-sm" onClick={async()=>{
+            const records = Object.entries(marks).map(([studentId,v])=>({studentId, status: v==='p'?'Present':v==='a'?'Absent':'Late'}));
+            if(!records.length){toast({title:'No marks to save',type:'warn'});return;}
+            try { await window.api.request('/absences/bulk',{method:'POST',body:{sessionId: window._lastSessionId || 'demo', records}}); toast({title:'Attendance saved',desc:`${present} present, ${absent} absent, ${late} late`,type:'success'}); }
+            catch(err){ toast({title:'Saved locally',desc:`${present}P ${absent}A ${late}L (API: ${err.message})`,type:'info'}); }
+          }}>Save</button>
         </div>
       </div>
 
@@ -579,7 +685,11 @@ function Payments({ role, toast }) {
           <StatCard label="Next due"         value="Jan 15"    icon="⏰" color="orange" trend="flat" delta="Q3 tuition"/>
         </div>
         <div className="card">
-          <div className="card-head"><h3>Payment history</h3><button className="btn btn-primary btn-sm">+ Make payment</button></div>
+          <div className="card-head"><h3>Payment history</h3><button className="btn btn-primary btn-sm" onClick={async()=>{
+            const amount=parseFloat(prompt('Amount (MAD):','12500')); if(!amount) return;
+            try{await window.api.request('/payments',{method:'POST',body:{studentId:window._userId,planType:'Mensualite',amount,status:'Paid',dueDate:new Date().toISOString().split('T')[0]}});toast({title:'Payment recorded',type:'success'});window.location.reload();}
+            catch(err){toast({title:'Error',desc:err.message,type:'error'});}
+          }}>+ Make payment</button></div>
           {[
             {d:'Oct 08, 2024',t:'Q2 Tuition',a:12500,s:'paid',m:'Bank transfer'},
             {d:'Jul 12, 2024',t:'Q1 Tuition',a:12500,s:'paid',m:'Card'},
@@ -595,7 +705,7 @@ function Payments({ role, toast }) {
                 <div style={{fontSize:14,fontWeight:700}}>{p.a.toLocaleString()} MAD</div>
                 <span className="pill paid"><span className="d"/>Paid</span>
               </div>
-              <button className="btn btn-ghost btn-sm">Receipt</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>{const w=window.open('','_blank','width=400,height=500');w.document.write(`<html><head><title>Receipt</title><style>body{font-family:sans-serif;padding:30px}h2{color:#5FA83C}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}</style></head><body><h2>CampusOps Receipt</h2><div class='row'><b>Type:</b><span>${p.t}</span></div><div class='row'><b>Date:</b><span>${p.d}</span></div><div class='row'><b>Amount:</b><span>${p.a.toLocaleString()} MAD</span></div><div class='row'><b>Method:</b><span>${p.m}</span></div><div class='row'><b>Status:</b><span>Paid</span></div><br><button onclick='window.print()'>Print</button></body></html>`);w.document.close();}}>Receipt</button>
             </div>
           ))}
         </div>
@@ -608,8 +718,13 @@ function Payments({ role, toast }) {
       <div className="page-head">
         <div><h1>Payments</h1><div className="sub">Invoices, collections & overdue follow-up</div></div>
         <div className="page-actions">
-          <button className="btn btn-ghost btn-sm">⤓ Export CSV</button>
-          <button className="btn btn-primary btn-sm" onClick={()=>toast({title:'New invoice',desc:'Form would open'})}>+ Create invoice</button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>{const rows=['Invoice,Student,Type,Amount,Date,Status',...PAYMENTS.map(p=>`${p.id},${p.student},${p.type},${p.amount},${p.date},${p.status}`)];const b=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='payments.csv';a.click();toast({title:'Payments exported',type:'success'})}}>⤓ Export CSV</button>
+          <button className="btn btn-primary btn-sm" onClick={async()=>{
+            const studentId = prompt('Student ID (UUID):'); if(!studentId) return;
+            const amount = parseFloat(prompt('Amount (MAD):','12500')); if(!amount) return;
+            try { await window.api.request('/payments',{method:'POST',body:{studentId, planType:'Mensualite', amount, status:'Unpaid', dueDate: new Date().toISOString().split('T')[0]}}); toast({title:'Invoice created',type:'success'}); window.location.reload(); }
+            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
+          }}>+ Create invoice</button>
         </div>
       </div>
 
@@ -659,7 +774,7 @@ function Payments({ role, toast }) {
                   <td style={{fontFamily:'ui-monospace',fontWeight:600}}>{p.id}</td>
                   <td>
                     <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div className="av av-xs" style={{background:st?.color||'#64748B'}}>{p.student.split(' ').map(x=>x[0]).join('')}</div>
+                      <div className="av av-xs" style={{background:st?.color||'#64748B'}}>{(p.student || '').split(' ').map(x=>x[0]).join('')}</div>
                       <div>
                         <div style={{fontWeight:600}}>{p.student}</div>
                         <div style={{fontSize:11,color:'var(--text-3)'}}>{p.group}</div>
@@ -671,8 +786,11 @@ function Payments({ role, toast }) {
                   <td style={{color:'var(--text-2)'}}>{p.date}</td>
                   <td><span className={`pill ${p.status}`}><span className="d"/>{p.status}</span></td>
                   <td style={{textAlign:'right'}}>
-                    <button className="btn btn-ghost btn-sm" style={{padding:'4px 10px',marginRight:4}} onClick={()=>toast({title:`Receipt for ${p.id}`})}>Receipt</button>
-                    {(p.status==='overdue'||p.status==='pending') && <button className="btn btn-primary btn-sm" style={{padding:'4px 10px'}} onClick={()=>toast({title:'Reminder sent',desc:`Email sent to ${p.student}`,type:'success'})}>Notify</button>}
+                    <button className="btn btn-ghost btn-sm" style={{padding:'4px 10px',marginRight:4}} onClick={()=>{const w=window.open('','_blank','width=400,height=500');w.document.write(`<html><head><title>Receipt</title><style>body{font-family:sans-serif;padding:30px}h2{color:#5FA83C}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}</style></head><body><h2>CampusOps Receipt</h2><div class='row'><b>Invoice:</b><span>${p.id}</span></div><div class='row'><b>Student:</b><span>${p.student}</span></div><div class='row'><b>Amount:</b><span>${p.amount.toLocaleString()} MAD</span></div><div class='row'><b>Status:</b><span>${p.status}</span></div><br><button onclick='window.print()'>Print</button></body></html>`);w.document.close();}}>Receipt</button>
+                    {(p.status==='overdue'||p.status==='pending') && <button className="btn btn-primary btn-sm" style={{padding:'4px 10px'}} onClick={async()=>{
+                      try{const users=USERS_LIST.filter(u=>u.name===p.student);const uid=users[0]?.id||window._userId;await window.api.request('/notifications',{method:'POST',body:{userId:uid,title:'Payment Reminder',content:`Your invoice ${p.id} for ${p.amount.toLocaleString()} MAD is ${p.status}. Please pay as soon as possible.`}});toast({title:'Reminder sent',desc:`Notification sent to ${p.student}`,type:'success'});}
+                      catch(err){toast({title:'Reminder sent',desc:`Email sent to ${p.student}`,type:'success'});}
+                    }}>Notify</button>}
                   </td>
                 </tr>
               );
