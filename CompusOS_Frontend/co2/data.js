@@ -12,6 +12,7 @@ const NAV_GROUPS = [
     { id:'planning',      label:'Planning',      icon:'▦', roles:['admin','scolarite','enseignant','etudiant'] },
     { id:'absences',      label:'Attendance',    icon:'✓', roles:['admin','scolarite','enseignant','etudiant'] },
     { id:'modules',       label:'Modules',       icon:'≡', roles:['admin','scolarite','enseignant','etudiant'] },
+    { id:'grades',        label:'Grades',        icon:'✎', roles:['admin','scolarite','enseignant','etudiant'] },
   ]},
   { label:'Personal',      items:[
     { id:'progress',      label:'Progress',      icon:'◴', roles:['admin','scolarite','enseignant','etudiant'] },

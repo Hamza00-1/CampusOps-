@@ -21,6 +21,7 @@ import absenceRoutes from './modules/absences/absence.routes';
 import progressRoutes from './modules/progress/progress.routes';
 import paymentRoutes from './modules/payments/payment.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
+import gradeRoutes from './modules/grades/grade.routes';
 
 // ============================================
 // CampusOps — Express Application
@@ -106,6 +107,7 @@ app.use(`${env.API_PREFIX}/absences`, absenceRoutes);
 app.use(`${env.API_PREFIX}/progress`, progressRoutes);
 app.use(`${env.API_PREFIX}/payments`, paymentRoutes);
 app.use(`${env.API_PREFIX}/notifications`, notificationRoutes);
+app.use(`${env.API_PREFIX}/grades`, gradeRoutes);
 
 // API root
 app.get(env.API_PREFIX, (_req, res) => {
@@ -117,7 +119,7 @@ app.get(env.API_PREFIX, (_req, res) => {
         modules: [
             'auth', 'users', 'branches', 'modules', 'groups',
             'planning', 'absences', 'progress', 'payments',
-            'notifications',
+            'notifications', 'grades',
         ],
     }, 'Welcome to CampusOps API — All modules active'));
 });

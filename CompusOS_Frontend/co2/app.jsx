@@ -3,7 +3,7 @@ const { useState: uSA, useEffect: uEA } = React;
 
 const PAGE_TITLES = {
   dashboard:'Dashboard', planning:'Planning', absences:'Attendance', modules:'Modules',
-  progress:'Progress', payments:'Payments', users:'Users', groups:'Groups',
+  progress:'Progress', grades:'Grades', payments:'Payments', users:'Users', groups:'Groups',
   branches:'Branches', notifications:'Notifications', settings:'Settings',
 };
 
@@ -211,6 +211,7 @@ function App() {
           {page==='absences'      && <Absences role={auth} toast={toast} />}
           {page==='modules'       && <Modules role={auth} toast={toast} />}
           {page==='progress'      && <Progress role={auth} />}
+          {page==='grades'        && <Grades role={auth} toast={toast} />}
           {page==='payments'      && <Payments role={auth} toast={toast} />}
           {page==='users'         && <Users toast={toast} />}
           {page==='groups'        && <Groups toast={toast} />}

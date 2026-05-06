@@ -39,6 +39,13 @@ enum PaymentStatus {
   Unpaid
 }
 
+enum GradeType {
+  Exam
+  TD
+  TP
+  Project
+}
+
 // ============================================
 // Core Organizational Models
 // ============================================
@@ -79,6 +86,8 @@ model User {
   absences      Absence[]      @relation("StudentAbsences")
   payments      Payment[]
   notifications Notification[]
+  studentGrades Grade[]        @relation("StudentGrades")
+  teacherGrades Grade[]        @relation("TeacherGrades")
 
   @@map("users")
 }
@@ -95,6 +104,7 @@ model Module {
   branch    Branch     @relation(fields: [branchId], references: [id])
   plannings Planning[]
   progress  Progress[]
+  grades    Grade[]
 
   @@map("modules")
 }
@@ -213,4 +223,25 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model Grade {
+  id        String    @id @default(uuid())
+  studentId String    @map("student_id")
+  moduleId  String    @map("module_id")
+  teacherId String    @map("teacher_id")
+  value     Decimal   @db.Decimal(4, 2)
+  gradeType GradeType @map("grade_type")
+  semester  String    @default("S1-2024")
+  comment   String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  student User   @relation("StudentGrades", fields: [studentId], references: [id])
+  module  Module @relation(fields: [moduleId], references: [id])
+  teacher User   @relation("TeacherGrades", fields: [teacherId], references: [id])
+
+  @@unique([studentId, moduleId, gradeType, semester])
+  @@map("grades")
 }
