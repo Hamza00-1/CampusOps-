@@ -501,19 +501,95 @@ function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
           )}
           {tab==='notifications' && (
             <div>
-              <h3 style={{marginBottom:14}}>{t('set.notifications')}</h3>
+              <h3 style={{marginBottom:6}}>Notification Channels</h3>
+              <p style={{fontSize:12.5,color:'var(--text-3)',marginBottom:18}}>Choose how and where you receive alerts about grades, absences, payments, and deadlines.</p>
+
+              {/* ── Email ── */}
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Email</div>
               {[
-                ['Email — daily digest','One email summarising activity since yesterday.', true],
-                ['Email — alerts only','Just absence/payment alerts, real-time.', true],
-                ['Browser push','Show desktop notifications in this browser.', false],
-                ['Grade submission reminders','Notify before grading deadlines.', true],
-                ['Payment reminders','Notify when invoices become overdue.', true],
+                ['Email — daily digest','One email summarising all activity since yesterday.',true],
+                ['Email — real-time alerts','Instant email for absences, payments, and grade submissions.',true],
               ].map(([title,sub,on],i) => (
-                <div key={i} className="setting-row">
+                <div key={'em'+i} className="setting-row">
                   <div><div className="t">{title}</div><div className="s">{sub}</div></div>
                   <button className={`toggle ${on?'on':''}`} onClick={(e)=>e.currentTarget.classList.toggle('on')}></button>
                 </div>
               ))}
+
+              <div style={{height:1,background:'var(--border)',margin:'16px 0'}}/>
+
+              {/* ── Telegram ── */}
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Telegram Bot</div>
+              <div className="setting-row">
+                <div>
+                  <div className="t">Enable Telegram notifications</div>
+                  <div className="s">Receive instant alerts via our <strong>@CampusOpsBot</strong> on Telegram.</div>
+                </div>
+                <button className="toggle" onClick={(e)=>{e.currentTarget.classList.toggle('on'); toast({type:'info', title:'Telegram setup', desc:'Open Telegram and message @CampusOpsBot with /start to link your account.'});}}></button>
+              </div>
+              <div className="setting-row" style={{background:'var(--hover)',borderRadius:8,padding:'10px 14px',margin:'8px 0'}}>
+                <div>
+                  <div className="t" style={{fontSize:12}}>How to connect</div>
+                  <div className="s">1. Open Telegram → search <strong>@CampusOpsBot</strong><br/>2. Send <code>/start</code><br/>3. The bot will reply with a link code<br/>4. Paste the code below and click "Link"</div>
+                </div>
+              </div>
+              <div style={{display:'flex',gap:8,marginBottom:4}}>
+                <input placeholder="Paste your Telegram link code…" style={{flex:1,fontSize:12.5}}/>
+                <button className="btn btn-primary btn-sm" onClick={()=>toast({type:'success',title:'Telegram linked!',desc:'You will now receive notifications via Telegram.'})}>Link</button>
+              </div>
+
+              <div style={{height:1,background:'var(--border)',margin:'16px 0'}}/>
+
+              {/* ── WhatsApp ── */}
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>WhatsApp</div>
+              <div className="setting-row">
+                <div>
+                  <div className="t">Enable WhatsApp notifications</div>
+                  <div className="s">Receive critical alerts (payment overdue, absence threshold) via WhatsApp.</div>
+                </div>
+                <button className="toggle" onClick={(e)=>{e.currentTarget.classList.toggle('on'); toast({type:'info', title:'WhatsApp setup', desc:'Enter your phone number above in Account settings, then enable this toggle.'});}}></button>
+              </div>
+              <div className="setting-row" style={{background:'var(--hover)',borderRadius:8,padding:'10px 14px',margin:'8px 0'}}>
+                <div>
+                  <div className="t" style={{fontSize:12}}>Phone number required</div>
+                  <div className="s">Make sure your phone number is set in the <strong>Account</strong> tab (e.g. +212 6XX XX XX XX). WhatsApp messages will be sent to that number.</div>
+                </div>
+              </div>
+
+              <div style={{height:1,background:'var(--border)',margin:'16px 0'}}/>
+
+              {/* ── Browser Push ── */}
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Browser</div>
+              <div className="setting-row">
+                <div>
+                  <div className="t">Browser push notifications</div>
+                  <div className="s">Show desktop pop-ups when CampusOps is open in this browser.</div>
+                </div>
+                <button className="toggle" onClick={(e)=>e.currentTarget.classList.toggle('on')}></button>
+              </div>
+
+              <div style={{height:1,background:'var(--border)',margin:'16px 0'}}/>
+
+              {/* ── Event Types ── */}
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Event Types</div>
+              <p style={{fontSize:12,color:'var(--text-3)',marginBottom:10}}>Select which events trigger notifications across all enabled channels.</p>
+              {[
+                ['New grade posted','When a teacher submits or updates a grade.',true],
+                ['Grade submission deadlines','Remind teachers before grading windows close.',true],
+                ['Absence threshold alert','When a student misses too many sessions.',true],
+                ['Payment due / overdue','When an invoice becomes due or overdue.',true],
+                ['Schedule changes','When a planning session is added, moved, or cancelled.',false],
+                ['System announcements','Platform updates and maintenance windows.',false],
+              ].map(([title,sub,on],i) => (
+                <div key={'ev'+i} className="setting-row">
+                  <div><div className="t">{title}</div><div className="s">{sub}</div></div>
+                  <button className={`toggle ${on?'on':''}`} onClick={(e)=>e.currentTarget.classList.toggle('on')}></button>
+                </div>
+              ))}
+
+              <div style={{marginTop:18,display:'flex',justifyContent:'flex-end'}}>
+                <button className="btn btn-primary" onClick={()=>toast({type:'success',title:'Notification preferences saved'})}>Save preferences</button>
+              </div>
             </div>
           )}
           {tab==='sessions' && (
