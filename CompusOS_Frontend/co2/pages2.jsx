@@ -1,416 +1,58 @@
-// CampusOps — Modules, Progress, Users, Groups, Branches, Notifications, Settings
-const { useState: uS2 } = React;
+// CampusOps — Pages part 2: Payments, Users, Groups, Notifications, Progress, Settings
+const { useState: uSP2, useMemo: uMP2, useEffect: uEP2 } = React;
 
-function Modules({ role, toast }) {
-  return (
-    <>
-      <div className="page-head">
-        <div><h1>Modules</h1><div className="sub">Academic modules catalog — {MODULES.length} modules · 29 total credits</div></div>
-        <div className="page-actions">
-          {role==='admin' && <button className="btn btn-primary btn-sm" onClick={async()=>{
-            const name = prompt('Module name:'); if(!name) return;
-            const branchId = (BRANCHES[0]||{}).id || prompt('Branch ID (UUID):'); if(!branchId) return;
-            try { await window.api.request('/modules',{method:'POST',body:{name, branchId}}); toast({title:'Module created',type:'success'}); window.location.reload(); }
-            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
-          }}>+ New module</button>}
-        </div>
-      </div>
-      <div className="grid-3">
-        {MODULES.map(m => {
-          const prog = [78,64,45,92,31,58][MODULES.indexOf(m)];
-          const students = [54,85,34,106,22,48][MODULES.indexOf(m)];
-          return (
-            <div key={m.code} className="card" style={{borderTop:`3px solid ${m.color}`,padding:20}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
-                <div>
-                  <div style={{fontSize:11,fontFamily:'ui-monospace',fontWeight:700,color:m.color,letterSpacing:0.4}}>{m.code}</div>
-                  <div style={{fontSize:15,fontWeight:700,marginTop:3,fontFamily:'var(--head-font)'}}>{m.name}</div>
-                </div>
-                <button className="tb-btn" style={{width:28,height:28,fontSize:14}} onClick={()=>toast({title:m.name,desc:`${m.code} · ${m.credits} credits · Prof. ${m.teacher} · ${students} students · ${prog}% complete`,type:'info'})}>⋯</button>
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
-                <div className="av av-xs" style={{background:m.color}}>{m.teacher.split(' ').slice(-2).map(p=>p[0]).join('')}</div>
-                <span style={{fontSize:12,color:'var(--text-2)'}}>{m.teacher}</span>
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'12px 0',borderTop:'1px solid var(--border)',borderBottom:'1px solid var(--border)',marginBottom:12}}>
-                <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.8,fontWeight:700}}>Students</div><div style={{fontSize:16,fontWeight:800,fontFamily:'var(--head-font)'}}>{students}</div></div>
-                <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.8,fontWeight:700}}>Credits</div><div style={{fontSize:16,fontWeight:800,fontFamily:'var(--head-font)'}}>{m.credits}</div></div>
-              </div>
-              <div style={{fontSize:11,color:'var(--text-2)',marginBottom:6,display:'flex',justifyContent:'space-between'}}><span>Syllabus progress</span><strong>{prog}%</strong></div>
-              <div className="pbar"><span style={{width:`${prog}%`,background:m.color}}/></div>
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-function Progress({ role }) {
-  const modGrades = [
-    {m:'CS301',n:'Algorithms & DS',g:15.8,c:'#5FA83C',w:[12,13,14,14.5,15,15.8]},
-    {m:'MA205',n:'Linear Algebra', g:14.2,c:'#7CB342',w:[13,13.5,14,14.2,14.2,14.2]},
-    {m:'PH210',n:'Quantum Physics',g:16.4,c:'#7C3AED',w:[14,15,15.5,16,16.2,16.4]},
-    {m:'EN150',n:'Business English',g:13.9,c:'#F59E0B',w:[12,12.5,13,13.4,13.7,13.9]},
-    {m:'CS420',n:'Distributed Systems',g:17.1,c:'#DC2626',w:[15,15.5,16,16.4,16.8,17.1]},
-    {m:'DB310',n:'Database Systems',g:14.6,c:'#0891B2',w:[13,13.5,14,14.2,14.4,14.6]},
-  ];
-  const overall = (modGrades.reduce((a,m)=>a+m.g,0)/modGrades.length).toFixed(2);
-  return (
-    <>
-      <div className="page-head"><div><h1>My progress</h1><div className="sub">Semester 1 · 2024-25</div></div><div className="page-actions"><button className="btn btn-ghost btn-sm" onClick={()=>{const w=window.open('','_blank','width=600,height=700');w.document.write(`<html><head><title>Transcript</title><style>body{font-family:sans-serif;padding:30px;max-width:550px;margin:auto}h2{color:#5FA83C;border-bottom:2px solid #5FA83C;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #eee}th{background:#f8f9fa;font-size:12px;text-transform:uppercase}td:last-child{text-align:right;font-weight:700}.avg{font-size:20px;font-weight:800;color:#5FA83C;text-align:center;margin:20px}</style></head><body><h2>CampusOps — Academic Transcript</h2><p>Student: <b>${ROLES[role]?.name||'Student'}</b><br>Semester 1 · 2024-25</p><table><tr><th>Code</th><th>Module</th><th>Grade</th></tr>${modGrades.map(m=>`<tr><td>${m.m}</td><td>${m.n}</td><td>${m.g}/20</td></tr>`).join('')}</table><div class='avg'>Overall: ${overall}/20</div><br><button onclick='window.print()'>Print Transcript</button></body></html>`);w.document.close()}}>⤓ Transcript</button></div></div>
-      <div className="grid-4" style={{marginBottom:14}}>
-        <div className="stat">
-          <div className="stat-h"><div className="stat-ic" style={{background:'var(--green-50)',color:'var(--green-600)'}}>◴</div></div>
-          <div style={{display:'flex',alignItems:'center',gap:14}}>
-            <div className="stat-v" style={{margin:0}}>{overall}</div>
-            <div><div style={{fontSize:11,color:'var(--text-3)',fontWeight:600}}>OUT OF 20</div><span className="badge green" style={{marginTop:4}}>Top 15%</span></div>
-          </div>
-          <div className="stat-l" style={{marginTop:8}}>General average</div>
-        </div>
-        <StatCard label="Attendance rate" value="96%" icon="✓" color="blue" trend="up" delta="+2%"/>
-        <StatCard label="Modules passed" value="6/6" icon="✓" color="green" trend="flat" delta="100%"/>
-        <StatCard label="Class rank" value="#4" icon="◈" color="orange" trend="up" delta="+2"/>
-      </div>
-      <div className="grid-2" style={{marginBottom:14}}>
-        <div className="card">
-          <div className="card-head"><h3>Grade evolution</h3><div className="meta">All modules · W1 → W6</div></div>
-          <svg viewBox="0 0 520 220" style={{width:'100%'}}>
-            {[10,12,14,16,18].map((l,i) => <g key={l}>
-              <line x1="30" x2="520" y1={200-((l-10)/8)*180} y2={200-((l-10)/8)*180} stroke="#F1F5F9"/>
-              <text x="0" y={204-((l-10)/8)*180} fontSize="9" fill="#94A3B8">{l}</text>
-            </g>)}
-            {modGrades.map(m => {
-              const pts = m.w.map((v,i)=>`${30+(i/5)*480},${200-((v-10)/8)*180}`).join(' ');
-              return <polyline key={m.m} points={pts} fill="none" stroke={m.c} strokeWidth="2" strokeLinejoin="round"/>;
-            })}
-          </svg>
-          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:10,fontSize:11}}>
-            {modGrades.map(m => <span key={m.m} style={{display:'flex',alignItems:'center',gap:5,color:'var(--text-2)'}}><span style={{width:8,height:8,background:m.c,borderRadius:2}}/>{m.m}</span>)}
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-head"><h3>Module breakdown</h3></div>
-          {modGrades.map((m,i,a) => (
-            <div key={m.m} style={{display:'flex',alignItems:'center',gap:12,padding:'11px 0',borderBottom:i<a.length-1?'1px solid var(--border)':'0'}}>
-              <div style={{width:4,height:32,background:m.c,borderRadius:2}}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:12.5,fontWeight:600}}>{m.n}</div>
-                <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'ui-monospace'}}>{m.m}</div>
-              </div>
-              <div style={{width:100}}><div className="pbar"><span style={{width:`${(m.g/20)*100}%`,background:m.c}}/></div></div>
-              <div style={{fontSize:15,fontWeight:800,fontFamily:'var(--head-font)',color:m.c,width:44,textAlign:'right'}}>{m.g}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
-}
-
-function Grades({ role, toast }) {
-  const isStudent = role === 'etudiant';
-  const [grades, setGrades] = uS2([]);
-  const [loading, setLoading] = uS2(true);
-  const [selModule, setSelModule] = uS2('');
-  const [selType, setSelType] = uS2('Exam');
-  const [students, setStudents] = uS2([]);
-  const [gradeInputs, setGradeInputs] = uS2({});
-  const [submitting, setSubmitting] = uS2(false);
-
-  const COLORS = ['#5FA83C','#7CB342','#7C3AED','#F59E0B','#DC2626','#0891B2','#6366F1','#EC4899'];
-
-  // Load grades on mount
-  React.useEffect(() => {
-    const load = async () => {
-      try {
-        if (isStudent && window._userId) {
-          const res = await window.api.request(`/grades/transcript/${window._userId}`);
-          setGrades(res.data);
-        } else {
-          const res = await window.api.request('/grades');
-          setGrades(res.data || []);
-        }
-      } catch(err) { /* no grades yet, that's fine */ }
-      setLoading(false);
-    };
-    load();
-  }, []);
-
-  // Load students when module is selected (for teacher view)
-  React.useEffect(() => {
-    if (!selModule || isStudent) return;
-    const load = async () => {
-      try {
-        const res = await window.api.request('/users?limit=200');
-        const studs = (res.data || []).filter(u => u.role === 'Etudiant');
-        if (studs.length > 0) {
-          setStudents(studs);
-        } else {
-          setStudents(window.STUDENTS || []);
-        }
-        setGradeInputs({});
-      } catch(_) {
-        // Fallback to fake data if API fails
-        setStudents(window.STUDENTS || []);
-        setGradeInputs({});
-      }
-    };
-    load();
-  }, [selModule]);
-
-  const handleSubmitGrades = async () => {
-    const entries = Object.entries(gradeInputs).filter(([_,v]) => v !== '' && v !== undefined);
-    if (!entries.length) { toast({title:'No grades entered',type:'error'}); return; }
-    setSubmitting(true);
-    try {
-      await window.api.request('/grades/bulk', { method: 'POST', body: {
-        moduleId: selModule,
-        gradeType: selType,
-        semester: 'S1-2024',
-        grades: entries.map(([studentId, value]) => ({ studentId, value: parseFloat(value) })),
-      }});
-      toast({title:`${entries.length} grade(s) saved`,type:'success'});
-      setGradeInputs({});
-      // Reload grades
-      const res = await window.api.request('/grades');
-      setGrades(res.data || []);
-    } catch(err) {
-      // Offline / Fake Data Mode Fallback
-      toast({title:`${entries.length} grade(s) saved (Mock Mode)`, type:'success'});
-      
-      const newGrades = entries.map(([studentId, value]) => {
-        const student = students.find(s => s.id === studentId) || { name: 'Unknown Student' };
-        const module = window.MODULES?.find(m => m.id === selModule) || { name: selModule };
-        return {
-          id: 'mock-' + Math.random(),
-          studentId: studentId,
-          student: student,
-          moduleId: selModule,
-          module: module,
-          gradeType: selType,
-          value: parseFloat(value),
-          semester: 'S1-2024'
-        };
-      });
-      
-      setGrades(prev => [...newGrades, ...(Array.isArray(prev) ? prev : [])]);
-      setGradeInputs({});
-    }
-    setSubmitting(false);
+// ─── PAYMENTS ───
+function Payments({ role, toast }){
+  const { t, lang } = useI18n();
+  const [filter, setFilter] = uSP2('all');
+  const me = ROLES.etudiant;
+  let rows = PAYMENTS;
+  if(role==='etudiant') rows = rows.filter(p=>p.student===me.name);
+  if(filter!=='all') rows = rows.filter(p=>p.status===filter);
+  const totals = {
+    paid: PAYMENTS.filter(p=>p.status==='paid').reduce((a,p)=>a+p.amount,0),
+    pending: PAYMENTS.filter(p=>p.status==='pending'||p.status==='partial').reduce((a,p)=>a+p.amount,0),
+    overdue: PAYMENTS.filter(p=>p.status==='overdue').reduce((a,p)=>a+p.amount,0),
   };
-
-  if (loading) return <div style={{padding:40,textAlign:'center',color:'var(--text-3)'}}>Loading grades…</div>;
-
-  // ── STUDENT VIEW ──
-  if (isStudent) {
-    const transcript = grades;
-    const modules = transcript.modules || [];
-    const overall = transcript.overall || 0;
-    const passed = modules.filter(m => m.average >= 10).length;
-
-    return (
-      <>
-        <div className="page-head">
-          <div><h1>My Grades</h1><div className="sub">Semester 1 · 2024-25 · Live from database</div></div>
-          <div className="page-actions">
-            <button className="btn btn-ghost btn-sm" onClick={() => {
-              const w = window.open('','_blank','width=600,height=700');
-              w.document.write(`<html><head><title>Transcript</title><style>body{font-family:sans-serif;padding:30px;max-width:550px;margin:auto}h2{color:#5FA83C;border-bottom:2px solid #5FA83C;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #eee}th{background:#f8f9fa;font-size:12px;text-transform:uppercase}td:last-child{text-align:right;font-weight:700}.avg{font-size:20px;font-weight:800;color:#5FA83C;text-align:center;margin:20px}</style></head><body><h2>CampusOps — Academic Transcript</h2><p>Student: <b>${ROLES[role]?.name||'Student'}</b><br>Semester 1 · 2024-25</p><table><tr><th>Module</th><th>Type</th><th>Grade</th></tr>${modules.map(m => m.grades.map(g => `<tr><td>${m.module?.name||'—'}</td><td>${g.gradeType}</td><td>${Number(g.value).toFixed(1)}/20</td></tr>`).join('')).join('')}</table><div class='avg'>Overall: ${overall}/20</div><br><button onclick='window.print()'>Print Transcript</button></body></html>`);
-              w.document.close();
-            }}>⤓ Transcript</button>
-          </div>
-        </div>
-
-        <div className="grid-4" style={{marginBottom:14}}>
-          <div className="stat">
-            <div className="stat-h"><div className="stat-ic" style={{background:'var(--green-50)',color:'var(--green-600)'}}>◴</div></div>
-            <div style={{display:'flex',alignItems:'center',gap:14}}>
-              <div className="stat-v" style={{margin:0}}>{overall.toFixed?overall.toFixed(2):overall}</div>
-              <div><div style={{fontSize:11,color:'var(--text-3)',fontWeight:600}}>OUT OF 20</div>
-                <span className={`badge ${overall >= 14 ? 'green' : overall >= 10 ? 'blue' : 'red'}`} style={{marginTop:4}}>
-                  {overall >= 16 ? 'Excellent' : overall >= 14 ? 'Très Bien' : overall >= 12 ? 'Bien' : overall >= 10 ? 'Passable' : 'À améliorer'}
-                </span>
-              </div>
-            </div>
-            <div className="stat-l" style={{marginTop:8}}>General average</div>
-          </div>
-          <StatCard label="Modules graded" value={`${modules.length}`} icon="◈" color="blue" trend="flat" delta="—"/>
-          <StatCard label="Modules passed" value={`${passed}/${modules.length}`} icon="✓" color="green" trend="flat" delta={modules.length ? `${Math.round(passed/modules.length*100)}%` : '—'}/>
-          <StatCard label="Total grades" value={`${modules.reduce((s,m) => s+m.grades.length, 0)}`} icon="✎" color="orange" trend="flat" delta="—"/>
-        </div>
-
-        {modules.length === 0 ? (
-          <div className="card" style={{padding:40,textAlign:'center'}}>
-            <div style={{fontSize:40,marginBottom:12}}>📊</div>
-            <div style={{fontSize:16,fontWeight:700,fontFamily:'var(--head-font)',marginBottom:6}}>No grades yet</div>
-            <div style={{fontSize:13,color:'var(--text-2)'}}>Your teachers have not entered any grades for this semester yet. Check back soon!</div>
-          </div>
-        ) : (
-          <div className="grid-2" style={{marginBottom:14}}>
-            <div className="card">
-              <div className="card-head"><h3>Module averages</h3></div>
-              {modules.map((m, i) => (
-                <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'11px 0',borderBottom:i<modules.length-1?'1px solid var(--border)':'0'}}>
-                  <div style={{width:4,height:32,background:COLORS[i % COLORS.length],borderRadius:2}}/>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12.5,fontWeight:600}}>{m.module?.name || '—'}</div>
-                    <div style={{fontSize:11,color:'var(--text-3)'}}>{m.grades.length} grade(s): {m.grades.map(g => g.gradeType).join(', ')}</div>
-                  </div>
-                  <div style={{width:100}}><div className="pbar"><span style={{width:`${(m.average/20)*100}%`,background:COLORS[i % COLORS.length]}}/></div></div>
-                  <div style={{fontSize:15,fontWeight:800,fontFamily:'var(--head-font)',color:COLORS[i % COLORS.length],width:44,textAlign:'right'}}>{m.average.toFixed(1)}</div>
-                </div>
-              ))}
-            </div>
-            <div className="card">
-              <div className="card-head"><h3>All grades detail</h3></div>
-              <table className="tbl">
-                <thead><tr><th>Module</th><th>Type</th><th>Grade</th><th>By</th></tr></thead>
-                <tbody>
-                  {modules.flatMap(m => m.grades.map(g => (
-                    <tr key={g.id}>
-                      <td style={{fontWeight:600}}>{m.module?.name}</td>
-                      <td><span className="badge blue">{g.gradeType}</span></td>
-                      <td style={{fontWeight:800,fontFamily:'var(--head-font)',color: Number(g.value) >= 10 ? '#5FA83C' : '#DC2626'}}>{Number(g.value).toFixed(1)}/20</td>
-                      <td style={{color:'var(--text-2)',fontSize:12}}>{g.teacher?.name || '—'}</td>
-                    </tr>
-                  )))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  // ── TEACHER / ADMIN VIEW ──
-  // Group existing grades by module
-  const gradesByModule = {};
-  (Array.isArray(grades) ? grades : []).forEach(g => {
-    const key = g.moduleId || g.module?.id;
-    if (!gradesByModule[key]) gradesByModule[key] = [];
-    gradesByModule[key].push(g);
-  });
+  const fmt = (n) => n.toLocaleString('en-US') + ' MAD';
 
   return (
     <>
       <div className="page-head">
-        <div><h1>Grade Management</h1><div className="sub">Enter and manage student grades · {Array.isArray(grades) ? grades.length : 0} total records</div></div>
-      </div>
-
-      {/* Grade Entry Panel */}
-      <div className="card" style={{marginBottom:14,padding:20}}>
-        <div className="card-head"><h3>Enter grades</h3><div className="meta">Select a module and grade type, then enter scores for each student</div></div>
-        <div style={{display:'flex',gap:12,marginBottom:16,flexWrap:'wrap'}}>
-          <select value={selModule} onChange={e => setSelModule(e.target.value)} style={{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,minWidth:200}}>
-            <option value="">— Select module —</option>
-            {MODULES.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-          <select value={selType} onChange={e => setSelType(e.target.value)} style={{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:13}}>
-            {['Exam','TD','TP','Project'].map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <button className="btn btn-primary btn-sm" disabled={!selModule || submitting} onClick={handleSubmitGrades}>
-            {submitting ? 'Saving…' : '✓ Save grades'}
-          </button>
+        <div>
+          <h1>{t('nav.Payments')}</h1>
+          <div className="sub">{lang==='fr'?'Suivi des frais et paiements':'Tuition fees and payments'}</div>
         </div>
-        {selModule && students.length > 0 && (
-          <table className="tbl">
-            <thead><tr><th>Student</th><th>Email</th><th style={{width:120}}>Grade /20</th></tr></thead>
-            <tbody>
-              {students.map(s => (
-                <tr key={s.id}>
-                  <td><div style={{display:'flex',alignItems:'center',gap:8}}><div className="av av-sm" style={{background:'#5FA83C'}}>{s.name?.substring(0,2).toUpperCase()}</div><span style={{fontWeight:600}}>{s.name}</span></div></td>
-                  <td style={{color:'var(--text-2)',fontSize:12.5}}>{s.email}</td>
-                  <td>
-                    <input type="number" min="0" max="20" step="0.5" placeholder="—"
-                      value={gradeInputs[s.id] || ''}
-                      onChange={e => setGradeInputs(p => ({...p, [s.id]: e.target.value}))}
-                      style={{width:'100%',padding:'6px 10px',border:'1px solid var(--border)',borderRadius:6,fontSize:13,textAlign:'center'}}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {selModule && students.length === 0 && <div style={{padding:20,textAlign:'center',color:'var(--text-3)'}}>No students found. Make sure students are registered in the system.</div>}
-        {!selModule && <div style={{padding:20,textAlign:'center',color:'var(--text-3)'}}>Select a module above to start entering grades.</div>}
       </div>
-
-      {/* Existing Grades Overview */}
-      {Array.isArray(grades) && grades.length > 0 && (
-        <div className="card" style={{padding:0}}>
-          <div style={{padding:'14px 18px',borderBottom:'1px solid var(--border)'}}>
-            <h3 style={{margin:0,fontFamily:'var(--head-font)'}}>Recorded grades</h3>
-            <div style={{fontSize:12,color:'var(--text-3)',marginTop:4}}>{grades.length} grade records in the database</div>
-          </div>
-          <table className="tbl">
-            <thead><tr><th>Student</th><th>Module</th><th>Type</th><th>Grade</th><th>Semester</th></tr></thead>
-            <tbody>
-              {grades.slice(0, 50).map(g => (
-                <tr key={g.id}>
-                  <td style={{fontWeight:600}}>{g.student?.name || '—'}</td>
-                  <td>{g.module?.name || '—'}</td>
-                  <td><span className="badge blue">{g.gradeType}</span></td>
-                  <td style={{fontWeight:800,fontFamily:'var(--head-font)',color: Number(g.value) >= 10 ? '#5FA83C' : '#DC2626'}}>{Number(g.value).toFixed(1)}/20</td>
-                  <td style={{color:'var(--text-3)',fontSize:12}}>{g.semester}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {role!=='etudiant' && (
+        <div className="grid-3" style={{marginBottom:14}}>
+          <div className="stat"><div className="stat-l">Collected</div><div className="stat-v" style={{color:'var(--green)'}}>{fmt(totals.paid)}</div></div>
+          <div className="stat"><div className="stat-l">Pending</div><div className="stat-v" style={{color:'var(--orange)'}}>{fmt(totals.pending)}</div></div>
+          <div className="stat"><div className="stat-l">Overdue</div><div className="stat-v" style={{color:'var(--red)'}}>{fmt(totals.overdue)}</div></div>
         </div>
       )}
-    </>
-  );
-}
-
-function Users({ toast }) {
-  const [search, setSearch] = uS2('');
-  const list = USERS_LIST.filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()));
-  return (
-    <>
-      <div className="page-head">
-        <div><h1>Users</h1><div className="sub">Manage platform accounts & permissions</div></div>
-        <div className="page-actions"><button className="btn btn-ghost btn-sm" onClick={()=>{const rows=['Name,Email,Role,Branch,Status',...USERS_LIST.map(u=>`${u.name},${u.email},${u.role},${u.branch},${u.status}`)];const b=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='users.csv';a.click();}}>⤓ Export</button><button className="btn btn-primary btn-sm" onClick={async()=>{
-            const name = prompt('Full name:'); if(!name) return;
-            const email = prompt('Email:'); if(!email) return;
-            const roleVal = prompt('Role (Admin/Scolarite/Enseignant/Etudiant):','Etudiant'); if(!roleVal) return;
-            const branchId = (BRANCHES[0]||{}).id || prompt('Branch ID:'); if(!branchId) return;
-            const password = prompt('Password (min 8 chars, 1 upper, 1 lower, 1 digit, 1 special):','Welcome1!'); if(!password) return;
-            try { await window.api.request('/users',{method:'POST',body:{name,email,password,role:roleVal,branchId}}); toast({title:'User created',type:'success'}); window.location.reload(); }
-            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
-          }}>+ Invite user</button></div>
-      </div>
-      <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard label="Total accounts" value="42" icon="◍" color="blue" trend="up" delta="+3"/>
-        <StatCard label="Faculty" value="18" icon="◴" color="green" trend="flat" delta="—"/>
-        <StatCard label="Admin staff" value="6" icon="⚙" color="orange" trend="flat" delta="—"/>
-        <StatCard label="Inactive" value="2" icon="◌" color="red" trend="flat" delta="—"/>
-      </div>
-      <div className="card" style={{padding:0}}>
-        <div style={{padding:'14px 18px',borderBottom:'1px solid var(--border)',display:'flex',gap:12,alignItems:'center'}}>
-          <div style={{flex:1,maxWidth:320,position:'relative'}}>
-            <input placeholder="Search users…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'8px 12px 8px 34px',border:'1px solid var(--border)',borderRadius:8,fontSize:13}}/>
-            <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text-3)'}}>⌕</span>
+      <div className="card">
+        <div className="card-head">
+          <div className="segment">
+            <button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>All</button>
+            <button className={filter==='paid'?'active':''} onClick={()=>setFilter('paid')}>{t('pay.paid')}</button>
+            <button className={filter==='pending'?'active':''} onClick={()=>setFilter('pending')}>{t('pay.pending')}</button>
+            <button className={filter==='overdue'?'active':''} onClick={()=>setFilter('overdue')}>{t('pay.overdue')}</button>
           </div>
-          <div style={{fontSize:12,color:'var(--text-3)'}}>{list.length} users</div>
+          <div className="meta">{rows.length} invoices</div>
         </div>
         <table className="tbl">
-          <thead><tr><th>User</th><th>Role</th><th>Branch</th><th>Email</th><th>Status</th><th style={{textAlign:'right'}}>Actions</th></tr></thead>
+          <thead><tr><th>Invoice</th><th>Student</th><th>Group</th><th>Type</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead>
           <tbody>
-            {list.map(u => (
-              <tr key={u.id}>
-                <td><div style={{display:'flex',alignItems:'center',gap:10}}><div className="av av-sm" style={{background:u.color}}>{u.init}</div><div><div style={{fontWeight:600}}>{u.name}</div><div style={{fontSize:11,color:'var(--text-3)',fontFamily:'ui-monospace'}}>{u.id}</div></div></div></td>
-                <td><span className="badge blue">{(ROLES[u.role]||{label:u.role}).label}</span></td>
-                <td style={{color:'var(--text-2)'}}>{u.branch}</td>
-                <td style={{color:'var(--text-2)',fontSize:12.5}}>{u.email}</td>
-                <td><span className={`pill ${u.status==='active'?'paid':'overdue'}`}><span className="d"/>{u.status}</span></td>
-                <td style={{textAlign:'right'}}><button className="btn btn-ghost btn-sm" style={{padding:'4px 10px'}} onClick={async()=>{
-                  const newName = prompt('Edit name:',u.name); if(!newName) return;
-                  try { await window.api.request(`/users/${u.id}`,{method:'PUT',body:{name:newName}}); toast({title:'User updated',type:'success'}); window.location.reload(); }
-                  catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
-                }}>Edit</button></td>
+            {rows.map(p => (
+              <tr key={p.id}>
+                <td className="mono" style={{fontWeight:600}}>{p.id}</td>
+                <td>{p.student}</td>
+                <td>{p.group}</td>
+                <td>{p.type}</td>
+                <td className="mono" style={{fontWeight:600}}>{fmt(p.amount)}</td>
+                <td><span className={`pill ${p.status}`}><span className="d"></span>{t('pay.'+p.status, p.status)}</span></td>
+                <td style={{color:'var(--text-2)',fontSize:12.5}}>{p.date}</td>
               </tr>
             ))}
           </tbody>
@@ -420,89 +62,248 @@ function Users({ toast }) {
   );
 }
 
-function Groups({ toast }) {
+// ─── USERS ───
+function Users({ toast }){
+  const { t, lang } = useI18n();
+  const [q, setQ] = uSP2('');
+  const [roleFilter, setRoleFilter] = uSP2('all');
+  const filtered = USERS_LIST.filter(u => {
+    if(roleFilter!=='all' && u.role!==roleFilter) return false;
+    if(q && !(u.name+' '+u.email+' '+u.branch).toLowerCase().includes(q.toLowerCase())) return false;
+    return true;
+  });
   return (
     <>
       <div className="page-head">
-        <div><h1>Groups</h1><div className="sub">Manage class groups & enrollments</div></div>
-        <div className="page-actions"><button className="btn btn-primary btn-sm" onClick={async()=>{
-            const name = prompt('Group name:'); if(!name) return;
-            const branchId = (BRANCHES[0]||{}).id || prompt('Branch ID (UUID):'); if(!branchId) return;
-            const academicYear = prompt('Academic year (e.g. 2025/2026):','2025/2026'); if(!academicYear) return;
-            try { await window.api.request('/groups',{method:'POST',body:{name,branchId,academicYear}}); toast({title:'Group created',type:'success'}); window.location.reload(); }
-            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
-          }}>+ New group</button></div>
+        <div>
+          <h1>{t('nav.Users')}</h1>
+          <div className="sub">{lang==='fr'?'Tous les utilisateurs du système':'All system users'}</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-primary btn-sm"><Icon name="plus" size={14}/>{lang==='fr'?'Inviter':'Invite user'}</button>
+        </div>
       </div>
-      <div className="grid-3">
-        {GROUPS_LIST.map(g => {
-          const br = BRANCHES.find(b=>b.name===g.branch) || {color:'#5FA83C'};
-          return (
-            <div key={g.id} className="card" style={{padding:18}}>
-              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
-                <div className="av av-md" style={{background:br.color,borderRadius:10}}>{g.id.split('-')[0]}</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:700}}>{g.name}</div>
-                  <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'ui-monospace'}}>{g.id} · {g.year}</div>
-                </div>
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,padding:'12px 0',borderTop:'1px solid var(--border)',marginBottom:12}}>
-                <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.6,fontWeight:700}}>Students</div><div style={{fontSize:16,fontWeight:800,fontFamily:'var(--head-font)'}}>{g.students}</div></div>
-                <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.6,fontWeight:700}}>Branch</div><div style={{fontSize:12.5,fontWeight:600,marginTop:3}}>{g.branch}</div></div>
-              </div>
-              <div style={{display:'flex',gap:6}}>
-                <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={async()=>{
-                  try{const res=await window.api.request(`/groups/${g.id}`);const d=res.data;const stuList=(d.students||[]).map(s=>s.student?.name||'?').join(', ')||'No students enrolled';toast({title:g.name,desc:`${g.students} students: ${stuList}`,type:'info'});}
-                  catch(err){toast({title:g.name,desc:`${g.students} students · ${g.branch}`,type:'info'});}
-                }}>View</button>
-                <button className="btn btn-primary btn-sm" style={{flex:1}} onClick={async()=>{
-                  const action=prompt('Enroll or Remove? (type "enroll" or "remove"):','enroll');
-                  if(!action) return;
-                  const studentId=prompt('Student ID (UUID):'); if(!studentId) return;
-                  try{
-                    if(action.toLowerCase()==='remove'){await window.api.request(`/groups/${g.id}/students`,{method:'DELETE',body:{studentId}});toast({title:'Student removed',type:'success'});}
-                    else{await window.api.request(`/groups/${g.id}/students`,{method:'POST',body:{studentId}});toast({title:'Student enrolled',type:'success'});}
-                    window.location.reload();
-                  }catch(err){toast({title:'Error',desc:err.message,type:'error'});}
-                }}>Manage</button>
-              </div>
+      <div className="card">
+        <div className="card-head">
+          <div style={{display:'flex',gap:8,alignItems:'center',flex:1,maxWidth:520}}>
+            <input placeholder={lang==='fr'?'Rechercher utilisateurs…':'Search users…'} value={q} onChange={e=>setQ(e.target.value)} style={{flex:1,padding:'8px 12px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}/>
+            <div className="segment">
+              <button className={roleFilter==='all'?'active':''} onClick={()=>setRoleFilter('all')}>All</button>
+              <button className={roleFilter==='admin'?'active':''} onClick={()=>setRoleFilter('admin')}>Admin</button>
+              <button className={roleFilter==='enseignant'?'active':''} onClick={()=>setRoleFilter('enseignant')}>Teachers</button>
+              <button className={roleFilter==='scolarite'?'active':''} onClick={()=>setRoleFilter('scolarite')}>Scolarité</button>
             </div>
-          );
-        })}
+          </div>
+          <div className="meta">{filtered.length} users</div>
+        </div>
+        <table className="tbl">
+          <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Branch</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {filtered.map(u => (
+              <tr key={u.id}>
+                <td>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span className="av av-sm" style={{background:u.color}}>{u.init}</span>
+                    <div>
+                      <div style={{fontWeight:600}}>{u.name}</div>
+                      <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{u.id}</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span className="badge gray" style={{textTransform:'capitalize'}}>{u.role}</span></td>
+                <td style={{color:'var(--text-2)'}}>{u.email}</td>
+                <td>{u.branch}</td>
+                <td><span className={`pill ${u.status==='active'?'paid':'overdue'}`}><span className="d"></span>{u.status}</span></td>
+                <td style={{textAlign:'right'}}>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>toast({type:'info',title:'Edit '+u.name})}><Icon name="edit" size={14}/></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </>
   );
 }
 
-function Branches({ toast }) {
+// ─── GROUPS ───
+function Groups({ toast }){
+  const { t, lang } = useI18n();
+  const [view, setView] = uSP2(null);
+  const [edit, setEdit] = uSP2(null);
+  const [editForm, setEditForm] = uSP2({});
+
+  const openEdit = (g) => {
+    setEditForm({ id: g.id, name: g.name, branch: g.branch, year: g.year, students: g.students });
+    setEdit(g);
+    setView(null);
+  };
+
+  const saveEdit = () => {
+    const idx = GROUPS_LIST.findIndex(g => g.id === edit.id);
+    if(idx >= 0) Object.assign(GROUPS_LIST[idx], editForm);
+    toast({ type:'success', title:'Group updated', desc: editForm.name + ' has been saved.' });
+    setEdit(null);
+  };
+
+  const groupStudents = (g) => STUDENTS.filter(s => s.group === g.id || s.group === g.name);
+
   return (
     <>
       <div className="page-head">
-        <div><h1>Branches</h1><div className="sub">Academic departments & programs</div></div>
-        <div className="page-actions"><button className="btn btn-primary btn-sm" onClick={async()=>{
-            const name = prompt('Branch name:'); if(!name) return;
-            const location = prompt('Location:','UEMF Campus, Fès'); if(!location) return;
-            try { await window.api.request('/branches',{method:'POST',body:{name,location}}); toast({title:'Branch created',type:'success'}); window.location.reload(); }
-            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
-          }}>+ New branch</button></div>
+        <div>
+          <h1>{t('nav.Groups')}</h1>
+          <div className="sub">{lang==='fr'?'Groupes et classes':'Class groups across all branches'}</div>
+        </div>
+        <div className="page-actions"><button className="btn btn-primary btn-sm"><Icon name="plus" size={14}/>{lang==='fr'?'Nouveau groupe':'New group'}</button></div>
       </div>
-      <div className="grid-2">
-        {BRANCHES.map(b => (
-          <div key={b.code} className="card" style={{padding:20,borderLeft:`3px solid ${b.color}`}}>
-            <div style={{display:'flex',alignItems:'flex-start',gap:14,marginBottom:14}}>
-              <div style={{width:48,height:48,borderRadius:12,background:`${b.color}18`,color:b.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:800,fontFamily:'var(--head-font)'}}>{b.code}</div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:16,fontWeight:700,fontFamily:'var(--head-font)'}}>{b.name}</div>
-                <div style={{fontSize:12,color:'var(--text-2)',marginTop:3}}>Head: <strong>{b.head}</strong></div>
+      <div className="grid-3">
+        {GROUPS_LIST.map(g => {
+          const studs = groupStudents(g);
+          return (
+            <div key={g.id} className="card">
+              <div style={{fontSize:11,fontFamily:'var(--mono)',color:'var(--text-3)',fontWeight:600}}>{g.id}</div>
+              <div style={{fontSize:16,fontWeight:700,marginTop:2}}>{g.name}</div>
+              <div style={{fontSize:12,color:'var(--text-2)',marginTop:2}}>{g.branch} • {g.year}</div>
+              <div style={{display:'flex',gap:14,marginTop:14,fontSize:12,color:'var(--text-2)'}}>
+                <div><div style={{fontSize:18,fontWeight:800,color:'var(--text)',fontFamily:'var(--head-font)'}}>{g.students}</div>Students</div>
+                <div><div style={{fontSize:18,fontWeight:800,color:'var(--text)',fontFamily:'var(--head-font)'}}>{studs.filter(s=>s.status==='active').length}</div>Active</div>
+              </div>
+              <div style={{marginTop:14,display:'flex',gap:6}}>
+                <button className="btn btn-ghost btn-sm" onClick={()=>setView(g)}><Icon name="eye" size={14}/>View</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(g)}><Icon name="edit" size={14}/>{t('btn.edit')}</button>
               </div>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,padding:'14px 0',borderTop:'1px solid var(--border)',borderBottom:'1px solid var(--border)',marginBottom:12}}>
-              <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.8,fontWeight:700}}>Students</div><div style={{fontSize:22,fontWeight:800,fontFamily:'var(--head-font)',color:b.color}}>{b.students}</div></div>
-              <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:0.8,fontWeight:700}}>Groups</div><div style={{fontSize:22,fontWeight:800,fontFamily:'var(--head-font)'}}>{b.groups}</div></div>
+          );
+        })}
+      </div>
+
+      {view && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setView(null)}></div>
+          <div className="drawer open">
+            <div className="drawer-head">
+              <div>
+                <div style={{fontSize:16,fontWeight:700}}>{view.name}</div>
+                <div style={{fontSize:12,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{view.id} • {view.branch}</div>
+              </div>
+              <button className="tb-btn" onClick={()=>setView(null)}><Icon name="close" size={16}/></button>
             </div>
-            <button className="btn btn-ghost btn-sm" style={{width:'100%'}} onClick={async()=>{
-              try{const res=await window.api.request(`/branches/${b.id||b.code}`);const d=res.data;toast({title:b.name,desc:`Location: ${d.location||'—'} · ${b.students} students · ${b.groups} groups`,type:'info'});}
-              catch(err){toast({title:b.name,desc:`${b.students} students · ${b.groups} groups`,type:'info'});}
-            }}>View details →</button>
+            <div className="drawer-body">
+              {(() => {
+                const studs = groupStudents(view);
+                return (
+                  <>
+                    <h4 style={{fontSize:12,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:10,fontWeight:700}}>
+                      Students ({studs.length || view.students})
+                    </h4>
+                    {studs.length === 0 && (
+                      <div style={{fontSize:13,color:'var(--text-3)',padding:'12px 0'}}>
+                        {view.students > 0 ? `${view.students} students enrolled (details not loaded).` : 'No students in this group.'}
+                      </div>
+                    )}
+                    {studs.map(s => (
+                      <div key={s.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+                        <span className="av av-sm" style={{background:s.color}}>{s.init}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontWeight:600,fontSize:13}}>{s.name}</div>
+                          <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{s.id}</div>
+                        </div>
+                        <div className="mono" style={{fontSize:13,fontWeight:600,color:s.avg>=14?'var(--green)':s.avg>=10?'var(--orange)':'var(--red)'}}>{s.avg.toFixed(1)}</div>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
+            </div>
+            <div className="drawer-foot">
+              <button className="btn btn-ghost" onClick={()=>setView(null)}>{t('btn.close')}</button>
+              <button className="btn btn-primary" onClick={()=>openEdit(view)}>{t('btn.edit')}</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {edit && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setEdit(null)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{lang==='fr'?'Modifier groupe':'Edit group'} — {edit.name}</h3>
+              <button className="tb-btn" onClick={()=>setEdit(null)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field"><label>Group ID</label><input value={editForm.id||''} onChange={e=>setEditForm(f=>({...f,id:e.target.value}))}/></div>
+                <div className="field"><label>Name</label><input value={editForm.name||''} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))}/></div>
+                <div className="field">
+                  <label>Branch</label>
+                  <select value={editForm.branch||''} onChange={e=>setEditForm(f=>({...f,branch:e.target.value}))}>
+                    {BRANCHES.map(b=><option key={b.code} value={b.name}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div className="field"><label>Academic year</label><input value={editForm.year||''} onChange={e=>setEditForm(f=>({...f,year:e.target.value}))}/></div>
+                <div className="field" style={{gridColumn:'1/-1'}}><label>Capacity</label><input type="number" value={editForm.students||0} onChange={e=>setEditForm(f=>({...f,students:parseInt(e.target.value)||0}))}/></div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>setEdit(null)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveEdit}>{t('btn.save')}</button>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+// ─── NOTIFICATIONS ───
+function Notifications({ toast }){
+  const { t, lang } = useI18n();
+  const [filter, setFilter] = uSP2('all');
+  const [items, setItems] = uSP2(NOTIFICATIONS);
+  const filtered = items.filter(n => filter==='all' || (filter==='unread' && !n.read) || filter===n.type);
+  const markAll = () => { setItems(items.map(i=>({...i, read:true}))); toast({type:'success',title:'All notifications marked as read'}); };
+  const markOne = (id) => setItems(items.map(i => i.id===id?{...i,read:true}:i));
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{t('nav.Notifications')}</h1>
+          <div className="sub">{items.filter(n=>!n.read).length} {lang==='fr'?'non lues':'unread'}</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-ghost btn-sm" onClick={markAll}>{t('btn.markAllRead')}</button>
+        </div>
+      </div>
+      <div style={{display:'flex',gap:8,marginBottom:14}}>
+        <div className="segment">
+          <button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>All</button>
+          <button className={filter==='unread'?'active':''} onClick={()=>setFilter('unread')}>Unread</button>
+          <button className={filter==='alert'?'active':''} onClick={()=>setFilter('alert')}>Alerts</button>
+          <button className={filter==='reminder'?'active':''} onClick={()=>setFilter('reminder')}>Reminders</button>
+          <button className={filter==='success'?'active':''} onClick={()=>setFilter('success')}>Success</button>
+        </div>
+      </div>
+      <div>
+        {filtered.length===0 && <div className="card"><div className="empty">No notifications match this filter.</div></div>}
+        {filtered.map(n => (
+          <div key={n.id} className={`notif t-${n.type} ${n.read?'':'unread'}`} onClick={()=>markOne(n.id)}>
+            <span className="dot"></span>
+            <div className="body">
+              <div className="t">
+                {n.title}
+                {!n.read && <span className="unread-dot"></span>}
+              </div>
+              <div className="d">{n.desc}</div>
+              <div className="tm">{n.time}</div>
+              {n.actions && (
+                <div className="actions">
+                  {n.actions.map((a,i) => <button key={i} onClick={(e)=>{e.stopPropagation(); toast({type:'info',title:a});}}>{a}</button>)}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -510,125 +311,237 @@ function Branches({ toast }) {
   );
 }
 
-function Notifications({ toast }) {
-  const [filter, setFilter] = uS2('all');
-  const list = NOTIFICATIONS.filter(n => filter==='all' || n.type===filter);
-  const unread = NOTIFICATIONS.filter(n=>!n.read).length;
+// ─── PROGRESS ───
+function Progress({ role }){
+  const { t, lang } = useI18n();
+  if(role==='etudiant'){
+    const me = ROLES.etudiant;
+    const overall = (STUDENT_GRADES.reduce((a,g)=>a+g.average,0)/STUDENT_GRADES.length).toFixed(2);
+    return (
+      <>
+        <div className="page-head">
+          <div>
+            <h1>{t('nav.Progress')}</h1>
+            <div className="sub">{me.name} — Group {me.group}</div>
+          </div>
+        </div>
+        <div className="grid-4" style={{marginBottom:14}}>
+          <div className="stat"><div className="stat-l">{t('grade.overall')}</div><div className="stat-v" style={{color:'var(--green)'}}>{overall}</div></div>
+          <div className="stat"><div className="stat-l">Modules passed</div><div className="stat-v">{STUDENT_GRADES.filter(g=>g.average>=10).length}/{STUDENT_GRADES.length}</div></div>
+          <div className="stat"><div className="stat-l">Attendance</div><div className="stat-v">96%</div></div>
+          <div className="stat"><div className="stat-l">Rank</div><div className="stat-v">3rd</div></div>
+        </div>
+        <div className="card">
+          <div className="card-head"><h3>Module breakdown</h3></div>
+          <table className="tbl">
+            <thead><tr><th>Module</th><th>Average</th><th>Status</th></tr></thead>
+            <tbody>
+              {STUDENT_GRADES.map(g => (
+                <tr key={g.module}>
+                  <td><strong>{g.name}</strong> <span style={{fontFamily:'var(--mono)',fontSize:11,color:'var(--text-3)',marginLeft:8}}>{g.module}</span></td>
+                  <td className="mono" style={{fontWeight:700,fontSize:14,color:g.average>=14?'var(--green)':g.average>=10?'var(--orange)':'var(--red)'}}>{g.average.toFixed(2)}</td>
+                  <td><span className={`pill ${g.average>=14?'paid':g.average>=10?'partial':'overdue'}`}><span className="d"></span>{g.average>=14?'Excellent':g.average>=10?'Passing':'At risk'}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
+    );
+  }
   return (
     <>
       <div className="page-head">
-        <div><h1>Notifications</h1><div className="sub">{unread} unread · {NOTIFICATIONS.length} total</div></div>
-        <div className="page-actions"><button className="btn btn-ghost btn-sm" onClick={async()=>{
-            try { await window.api.request('/notifications/read-all',{method:'PUT'}); toast({title:'All marked read',type:'success'}); NOTIFICATIONS.forEach(n=>n.read=true); }
-            catch(err){ toast({title:'Marked read locally',type:'info'}); NOTIFICATIONS.forEach(n=>n.read=true); }
-          }}>Mark all read</button></div>
+        <div>
+          <h1>{t('nav.Progress')}</h1>
+          <div className="sub">{lang==='fr'?'Suivi de progression':'Academic progress overview'}</div>
+        </div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'220px 1fr',gap:14}}>
-        <div className="card" style={{padding:12,height:'fit-content'}}>
-          {[{k:'all',l:'All',ic:'◐'},{k:'info',l:'Info',ic:'ℹ',c:'blue'},{k:'success',l:'Success',ic:'✓',c:'green'},{k:'alert',l:'Alerts',ic:'⚠',c:'red'},{k:'reminder',l:'Reminders',ic:'⏰',c:'orange'}].map(f => {
-            const count = f.k==='all'?NOTIFICATIONS.length:NOTIFICATIONS.filter(n=>n.type===f.k).length;
-            return (
-              <div key={f.k} className={`sb-item ${filter===f.k?'active':''}`} onClick={()=>setFilter(f.k)} style={{margin:0}}>
-                <span className="ic">{f.ic}</span>
-                <span className="lbl">{f.l}</span>
-                <span style={{marginLeft:'auto',fontSize:11,color:'var(--text-3)',fontWeight:600}}>{count}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="card" style={{padding:10}}>
-          {list.map(n => {
-            const c = n.type==='alert'?'red':n.type==='success'?'green':n.type==='reminder'?'orange':'blue';
-            const ic = n.type==='alert'?'⚠':n.type==='success'?'✓':n.type==='reminder'?'⏰':'ℹ';
-            const clr = c==='red'?'red':c==='green'?'green-600':c==='orange'?'orange':'blue';
-            const bg = c==='red'?'red':c==='green'?'green':c==='orange'?'orange':'blue';
-            return (
-              <div key={n.id} className={`notif ${!n.read?'unread':''}`}>
-                <div className="ic" style={{background:`var(--${bg}-50)`,color:`var(--${clr})`}}>{ic}</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:3}}>
-                    <span className="t">{n.title}</span>
-                    {!n.read && <span style={{width:7,height:7,borderRadius:'50%',background:'var(--blue)'}}/>}
+      <div className="card">
+        <div className="card-head"><h3>Students at a glance</h3></div>
+        <table className="tbl">
+          <thead><tr><th>Student</th><th>Group</th><th>Average</th><th>Attendance</th><th>Status</th></tr></thead>
+          <tbody>
+            {STUDENTS.map(s => (
+              <tr key={s.id}>
+                <td>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span className="av av-sm" style={{background:s.color}}>{s.init}</span>
+                    <div style={{fontWeight:600}}>{s.name}</div>
                   </div>
-                  <div className="d">{n.desc}</div>
-                  <div className="tm">{n.time}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </td>
+                <td>{s.group}</td>
+                <td className="mono" style={{fontWeight:600,color:s.avg>=14?'var(--green)':s.avg>=10?'var(--orange)':'var(--red)'}}>{s.avg.toFixed(1)}</td>
+                <td className="mono">{s.att}%</td>
+                <td><span className={`pill ${s.status==='active'?'paid':'overdue'}`}><span className="d"></span>{s.status}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </>
   );
 }
 
-function Settings({ role, onLogout }) {
-  const [dark, setDark] = uS2(false);
-  const [twofa, setTwofa] = uS2(true);
-  const [notifOn, setNotifOn] = uS2(true);
-  const [emails, setEmails] = uS2(false);
-  const user = ROLES[role];
+// ─── SETTINGS ───
+function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
+  const { t } = useI18n();
+  const [tab, setTab] = uSP2('account');
+  const [phone, setPhone] = uSP2(() => localStorage.getItem('co2_phone') || '');
+  const [density, setDensity] = uSP2(() => localStorage.getItem('co2_density') || 'comfortable');
+  const r = ROLES[role];
+
+  uEP2(() => {
+    document.documentElement.setAttribute('data-density', density);
+  }, [density]);
+
+  const applyDensity = (d) => {
+    setDensity(d);
+    localStorage.setItem('co2_density', d);
+  };
+
   return (
     <>
-      <div className="page-head"><div><h1>Settings</h1><div className="sub">Manage your account preferences</div></div></div>
-      <div style={{display:'grid',gridTemplateColumns:'240px 1fr',gap:20,maxWidth:900}}>
+      <div className="page-head">
         <div>
-          {['Profile','Security','Notifications','Appearance','Sessions'].map((s,i) => <div key={s} className={`sb-item ${i===0?'active':''}`} style={{margin:'0 0 2px'}}><span className="lbl">{s}</span></div>)}
+          <h1>{t('nav.Settings')}</h1>
+          <div className="sub">{lang==='fr'?'Préférences et compte':'Preferences and account'}</div>
         </div>
-        <div>
-          <div className="card" style={{marginBottom:14}}>
-            <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:14}}>Profile</div>
-            <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:18}}>
-              <div className="av av-md" style={{background:user.color,width:64,height:64,fontSize:20}}>{user.name.split(' ').map(p=>p[0]).slice(0,2).join('')}</div>
-              <div><div style={{fontSize:15,fontWeight:700}}>{user.name}</div><div style={{fontSize:12,color:'var(--text-2)'}}>{user.email}</div><button className="btn btn-ghost btn-sm" style={{marginTop:8}} onClick={()=>toast({title:'Upload photo',desc:'Photo upload coming in v2 — avatars use initials for now',type:'info'})}>Upload photo</button></div>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-              <div className="field"><label>Full name</label><input defaultValue={user.name}/></div>
-              <div className="field"><label>Email</label><input defaultValue={user.email}/></div>
-              <div className="field"><label>Role</label><input defaultValue={user.label} disabled style={{opacity:0.6}}/></div>
-              <div className="field"><label>Language</label><select><option>English</option><option>Français</option><option>العربية</option></select></div>
-            </div>
+      </div>
+      <div style={{display:'grid', gridTemplateColumns:'220px 1fr', gap:18}}>
+        <div className="card" style={{padding:10, alignSelf:'flex-start'}}>
+          <div className="settings-nav">
+            <button className={`tab ${tab==='account'?'active':''}`} onClick={()=>setTab('account')}><Icon name="users" size={16}/>{t('set.account')}</button>
+            <button className={`tab ${tab==='security'?'active':''}`} onClick={()=>setTab('security')}><Icon name="lock" size={16}/>{t('set.security')}</button>
+            <button className={`tab ${tab==='appearance'?'active':''}`} onClick={()=>setTab('appearance')}><Icon name="palette" size={16}/>{t('set.appearance')}</button>
+            <button className={`tab ${tab==='notifications'?'active':''}`} onClick={()=>setTab('notifications')}><Icon name="bell" size={16}/>{t('set.notifications')}</button>
+            <button className={`tab ${tab==='sessions'?'active':''}`} onClick={()=>setTab('sessions')}><Icon name="device" size={16}/>{t('set.sessions')}</button>
           </div>
-
-          <div className="card" style={{marginBottom:14}}>
-            <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:4}}>Security</div>
-            <div className="setting-row">
-              <div><div className="t">Two-factor authentication</div><div className="s">Require a 6-digit code from your authenticator app at every sign-in.</div></div>
-              <div className={`toggle ${twofa?'on':''}`} onClick={()=>setTwofa(!twofa)}/>
+        </div>
+        <div className="card">
+          {tab==='account' && (
+            <div>
+              <h3 style={{marginBottom:14}}>{t('set.account')}</h3>
+              <div style={{display:'flex',alignItems:'center',gap:14,paddingBottom:18,borderBottom:'1px solid var(--border)',marginBottom:14}}>
+                <div className="av av-md" style={{background:r.color, width:64, height:64, fontSize:20}}>{r.name.split(' ').map(p=>p[0]).slice(0,2).join('')}</div>
+                <div>
+                  <div style={{fontSize:18,fontWeight:700}}>{r.name}</div>
+                  <div style={{fontSize:13,color:'var(--text-2)'}}>{r.email}</div>
+                  <div style={{fontSize:12,color:'var(--text-3)',marginTop:2}}>{r.label}{r.field?` — ${r.field}`:''}</div>
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="field"><label>Full name</label><input defaultValue={r.name}/></div>
+                <div className="field"><label>Email</label><input defaultValue={r.email}/></div>
+                <div className="field">
+                  <label>Phone</label>
+                  <input
+                    value={phone}
+                    onChange={e=>setPhone(e.target.value)}
+                    placeholder="+212 …"
+                  />
+                </div>
+                <div className="field"><label>{t('set.language')}</label><select value={lang} onChange={e=>setLang(e.target.value)}><option value="en">English</option><option value="fr">Français</option></select></div>
+              </div>
+              <div style={{marginTop:14,display:'flex',justifyContent:'flex-end'}}>
+                <button className="btn btn-primary" onClick={()=>{ localStorage.setItem('co2_phone', phone); toast({type:'success',title:'Profile saved', desc:'Your changes have been saved.'}); }}>{t('btn.save')}</button>
+              </div>
             </div>
-            <div className="setting-row">
-              <div><div className="t">Password</div><div className="s">Last changed 42 days ago.</div></div>
-              <button className="btn btn-ghost btn-sm" onClick={async()=>{
-                const cur = prompt('Current password:'); if(!cur) return;
-                const np = prompt('New password (8+ chars, 1 upper, 1 lower, 1 digit, 1 special):'); if(!np) return;
-                try { await window.api.request('/auth/change-password',{method:'PUT',body:{currentPassword:cur,newPassword:np}}); toast({title:'Password changed',type:'success'}); }
-                catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
-              }}>Change</button>
+          )}
+          {tab==='security' && (
+            <div>
+              <h3 style={{marginBottom:14}}>{t('set.security')}</h3>
+              <div className="setting-row">
+                <div><div className="t">{t('set.changePassword')}</div><div className="s">Use at least 12 characters with a mix of letters, numbers and symbols.</div></div>
+                <button className="btn btn-ghost btn-sm" onClick={()=>toast({type:'info',title:'Password reset email sent'})}>Change</button>
+              </div>
+              <div className="setting-row">
+                <div><div className="t">{t('set.2fa')}</div><div className="s">Add an extra layer of security using an authenticator app or SMS code.</div></div>
+                <button className="toggle" onClick={(e)=>{e.currentTarget.classList.toggle('on'); toast({type:'success',title:'2FA toggled'});}}></button>
+              </div>
+              <div className="setting-row">
+                <div><div className="t">Login alerts</div><div className="s">Email me when there's a sign-in from a new device or location.</div></div>
+                <button className="toggle on"></button>
+              </div>
+              <div className="setting-row">
+                <div><div className="t">API tokens</div><div className="s">Manage personal access tokens for integrations.</div></div>
+                <button className="btn btn-ghost btn-sm">Manage</button>
+              </div>
             </div>
-            <div className="setting-row">
-              <div><div className="t">Active sessions</div><div className="s">2 devices currently signed in.</div></div>
-              <button className="btn btn-ghost btn-sm" onClick={()=>toast({title:'Active sessions',desc:'1. This browser — current session\n2. Mobile app — last active 2h ago',type:'info'})}>Review</button>
+          )}
+          {tab==='appearance' && (
+            <div>
+              <h3 style={{marginBottom:14}}>{t('set.appearance')}</h3>
+              <div className="setting-row">
+                <div><div className="t">Theme</div><div className="s">Choose how CampusOps looks. System matches your OS preference.</div></div>
+                <div className="segment">
+                  <button className={theme==='light'?'active':''} onClick={()=>setTheme('light')}>{t('set.lightMode')}</button>
+                  <button className={theme==='dark'?'active':''} onClick={()=>setTheme('dark')}>{t('set.darkMode')}</button>
+                </div>
+              </div>
+              <div className="setting-row">
+                <div><div className="t">{t('set.language')}</div><div className="s">Interface language for menus, tables and forms.</div></div>
+                <div className="segment">
+                  <button className={lang==='en'?'active':''} onClick={()=>setLang('en')}>English</button>
+                  <button className={lang==='fr'?'active':''} onClick={()=>setLang('fr')}>Français</button>
+                </div>
+              </div>
+              <div className="setting-row">
+                <div><div className="t">Density</div><div className="s">Comfortable spacing or compact for more on screen.</div></div>
+                <div className="segment">
+                  <button className={density==='comfortable'?'active':''} onClick={()=>applyDensity('comfortable')}>Comfortable</button>
+                  <button className={density==='compact'?'active':''} onClick={()=>applyDensity('compact')}>Compact</button>
+                </div>
+              </div>
+              <div className="setting-row">
+                <div><div className="t">Reduce motion</div><div className="s">Disable non-essential animations and transitions.</div></div>
+                <button className="toggle"></button>
+              </div>
             </div>
-          </div>
-
-          <div className="card" style={{marginBottom:14}}>
-            <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:4}}>Notifications</div>
-            <div className="setting-row"><div><div className="t">In-app notifications</div><div className="s">Show toast pop-ups and sidebar badge.</div></div><div className={`toggle ${notifOn?'on':''}`} onClick={()=>setNotifOn(!notifOn)}/></div>
-            <div className="setting-row"><div><div className="t">Email digests</div><div className="s">Daily summary of alerts, approvals and deadlines.</div></div><div className={`toggle ${emails?'on':''}`} onClick={()=>setEmails(!emails)}/></div>
-          </div>
-
-          <div className="card" style={{marginBottom:14}}>
-            <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:4}}>Appearance</div>
-            <div className="setting-row"><div><div className="t">Dark mode</div><div className="s">Coming soon — light mode default for v1.</div></div><div className={`toggle ${dark?'on':''}`} onClick={()=>setDark(!dark)}/></div>
-          </div>
-
-          <div className="card">
-            <button className="btn btn-danger-soft btn-sm" onClick={onLogout}>⎋ Sign out of this session</button>
-          </div>
+          )}
+          {tab==='notifications' && (
+            <div>
+              <h3 style={{marginBottom:14}}>{t('set.notifications')}</h3>
+              {[
+                ['Email — daily digest','One email summarising activity since yesterday.', true],
+                ['Email — alerts only','Just absence/payment alerts, real-time.', true],
+                ['Browser push','Show desktop notifications in this browser.', false],
+                ['Grade submission reminders','Notify before grading deadlines.', true],
+                ['Payment reminders','Notify when invoices become overdue.', true],
+              ].map(([title,sub,on],i) => (
+                <div key={i} className="setting-row">
+                  <div><div className="t">{title}</div><div className="s">{sub}</div></div>
+                  <button className={`toggle ${on?'on':''}`} onClick={(e)=>e.currentTarget.classList.toggle('on')}></button>
+                </div>
+              ))}
+            </div>
+          )}
+          {tab==='sessions' && (
+            <div>
+              <h3 style={{marginBottom:14}}>{t('set.activeSessions')}</h3>
+              {[
+                ['MacBook Pro — Chrome','Casablanca, Morocco','Active now',true],
+                ['iPhone 15 — Safari','Casablanca, Morocco','3 hours ago',false],
+                ['Windows — Firefox','Rabat, Morocco','2 days ago',false],
+              ].map(([d,loc,tm,cur],i)=> (
+                <div key={i} style={{display:'flex',alignItems:'center',gap:14,padding:'14px 0',borderBottom:'1px solid var(--border)'}}>
+                  <div style={{width:40,height:40,borderRadius:10,background:'var(--hover)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-2)'}}><Icon name="device" size={18}/></div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:600,fontSize:13.5}}>{d} {cur && <span className="badge green" style={{marginLeft:8}}>This device</span>}</div>
+                    <div style={{fontSize:12,color:'var(--text-3)'}}>{loc} • {tm}</div>
+                  </div>
+                  {!cur && <button className="btn btn-ghost btn-sm" onClick={()=>toast({type:'success',title:'Session revoked'})}>Revoke</button>}
+                </div>
+              ))}
+              <div style={{marginTop:18,display:'flex',justifyContent:'flex-end',gap:8}}>
+                <button className="btn btn-danger-soft btn-sm" onClick={()=>{ toast({type:'warn',title:'Signed out everywhere'}); setTimeout(onLogout, 500); }}>{t('set.signOutAll')}</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 }
 
-Object.assign(window, { Modules, Progress, Grades, Users, Groups, Branches, Notifications, Settings });
+Object.assign(window, { Payments, Users, Groups, Notifications, Progress, Settings });
