@@ -194,7 +194,7 @@ function App() {
           {page==='users'         && <Users toast={toast} />}
           {page==='groups'        && <Groups toast={toast} />}
           {page==='branches'      && <Branches toast={toast} />}
-          {page==='notifications' && <Notifications toast={toast} />}
+          {page==='notifications' && <Notifications role={auth} toast={toast} />}
           {page==='settings'      && <Settings role={auth} onLogout={handleLogout} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} toast={toast} />}
         </main>
       </div>

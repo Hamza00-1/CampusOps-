@@ -258,55 +258,253 @@ function Groups({ toast }){
 }
 
 // ─── NOTIFICATIONS ───
-function Notifications({ toast }){
+function Notifications({ role, toast }){
   const { t, lang } = useI18n();
+  const isAdmin = role === 'admin' || role === 'scolarite';
+  const [view, setView] = uSP2(isAdmin ? 'inbox' : 'inbox');
   const [filter, setFilter] = uSP2('all');
   const [items, setItems] = uSP2(NOTIFICATIONS);
   const filtered = items.filter(n => filter==='all' || (filter==='unread' && !n.read) || filter===n.type);
   const markAll = () => { setItems(items.map(i=>({...i, read:true}))); toast({type:'success',title:'All notifications marked as read'}); };
   const markOne = (id) => setItems(items.map(i => i.id===id?{...i,read:true}:i));
 
+  // Composer state (admin/scolarite only)
+  const [compType, setCompType] = uSP2('info');
+  const [compTitle, setCompTitle] = uSP2('');
+  const [compBody, setCompBody] = uSP2('');
+  const [compAudience, setCompAudience] = uSP2('all_students');
+  const [compGroup, setCompGroup] = uSP2('');
+  const [compUser, setCompUser] = uSP2('');
+  const [compChannels, setCompChannels] = uSP2({ inapp: true, email: true, telegram: false, whatsapp: false });
+  const [sending, setSending] = uSP2(false);
+  const [sentLog, setSentLog] = uSP2([]);
+
+  const toggleCh = (ch) => setCompChannels(prev => ({...prev, [ch]: !prev[ch]}));
+
+  const handleSend = async () => {
+    if (!compTitle.trim()) { toast({type:'error', title:'Title is required'}); return; }
+    if (!compBody.trim()) { toast({type:'error', title:'Message body is required'}); return; }
+    const channels = Object.entries(compChannels).filter(([_,v])=>v).map(([k])=>k);
+    if (!channels.length) { toast({type:'error', title:'Select at least one delivery channel'}); return; }
+
+    setSending(true);
+    const audienceLabel = compAudience === 'all_students' ? 'All students' : compAudience === 'all_teachers' ? 'All teachers' : compAudience === 'all' ? 'Everyone' : compAudience === 'group' ? `Group: ${compGroup || '?'}` : `User: ${compUser || '?'}`;
+
+    try {
+      await window.api.request('/notifications', { method: 'POST', body: {
+        title: compTitle, content: compBody, type: compType,
+        audience: compAudience, groupId: compGroup || undefined, userId: compUser || undefined,
+        channels,
+      }});
+      toast({type:'success', title:'Notification sent!', desc:`Delivered to ${audienceLabel} via ${channels.join(', ')}`});
+    } catch(err) {
+      // Mock mode fallback
+      toast({type:'success', title:'Notification sent (Mock Mode)', desc:`Would deliver to ${audienceLabel} via ${channels.join(', ')}`});
+    }
+
+    // Add to sent log
+    setSentLog(prev => [{ id: Date.now(), title: compTitle, body: compBody, type: compType, audience: audienceLabel, channels, time: new Date().toLocaleTimeString() }, ...prev]);
+    // Also add to inbox as preview
+    setItems(prev => [{ id: Date.now(), type: compType, title: compTitle, desc: compBody, time: 'Just now', read: true }, ...prev]);
+
+    setCompTitle(''); setCompBody('');
+    setSending(false);
+  };
+
   return (
     <>
       <div className="page-head">
         <div>
           <h1>{t('nav.Notifications')}</h1>
-          <div className="sub">{items.filter(n=>!n.read).length} {lang==='fr'?'non lues':'unread'}</div>
+          <div className="sub">{isAdmin ? (view==='compose' ? 'Send notifications to users' : `${items.filter(n=>!n.read).length} unread`) : `${items.filter(n=>!n.read).length} unread`}</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-ghost btn-sm" onClick={markAll}>{t('btn.markAllRead')}</button>
+          {isAdmin && (
+            <div className="segment" style={{marginRight:8}}>
+              <button className={view==='inbox'?'active':''} onClick={()=>setView('inbox')}>Inbox</button>
+              <button className={view==='compose'?'active':''} onClick={()=>setView('compose')}>Send</button>
+              <button className={view==='history'?'active':''} onClick={()=>setView('history')}>Sent Log</button>
+            </div>
+          )}
+          {view==='inbox' && <button className="btn btn-ghost btn-sm" onClick={markAll}>{t('btn.markAllRead')}</button>}
         </div>
       </div>
-      <div style={{display:'flex',gap:8,marginBottom:14}}>
-        <div className="segment">
-          <button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>All</button>
-          <button className={filter==='unread'?'active':''} onClick={()=>setFilter('unread')}>Unread</button>
-          <button className={filter==='alert'?'active':''} onClick={()=>setFilter('alert')}>Alerts</button>
-          <button className={filter==='reminder'?'active':''} onClick={()=>setFilter('reminder')}>Reminders</button>
-          <button className={filter==='success'?'active':''} onClick={()=>setFilter('success')}>Success</button>
-        </div>
-      </div>
-      <div>
-        {filtered.length===0 && <div className="card"><div className="empty">No notifications match this filter.</div></div>}
-        {filtered.map(n => (
-          <div key={n.id} className={`notif t-${n.type} ${n.read?'':'unread'}`} onClick={()=>markOne(n.id)}>
-            <span className="dot"></span>
-            <div className="body">
-              <div className="t">
-                {n.title}
-                {!n.read && <span className="unread-dot"></span>}
-              </div>
-              <div className="d">{n.desc}</div>
-              <div className="tm">{n.time}</div>
-              {n.actions && (
-                <div className="actions">
-                  {n.actions.map((a,i) => <button key={i} onClick={(e)=>{e.stopPropagation(); toast({type:'info',title:a});}}>{a}</button>)}
-                </div>
-              )}
+
+      {/* ─── INBOX VIEW ─── */}
+      {view==='inbox' && (
+        <>
+          <div style={{display:'flex',gap:8,marginBottom:14}}>
+            <div className="segment">
+              <button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>All</button>
+              <button className={filter==='unread'?'active':''} onClick={()=>setFilter('unread')}>Unread</button>
+              <button className={filter==='alert'?'active':''} onClick={()=>setFilter('alert')}>Alerts</button>
+              <button className={filter==='reminder'?'active':''} onClick={()=>setFilter('reminder')}>Reminders</button>
+              <button className={filter==='success'?'active':''} onClick={()=>setFilter('success')}>Success</button>
             </div>
           </div>
-        ))}
-      </div>
+          <div>
+            {filtered.length===0 && <div className="card"><div className="empty">No notifications match this filter.</div></div>}
+            {filtered.map(n => (
+              <div key={n.id} className={`notif t-${n.type} ${n.read?'':'unread'}`} onClick={()=>markOne(n.id)}>
+                <span className="dot"></span>
+                <div className="body">
+                  <div className="t">
+                    {n.title}
+                    {!n.read && <span className="unread-dot"></span>}
+                  </div>
+                  <div className="d">{n.desc}</div>
+                  <div className="tm">{n.time}</div>
+                  {n.actions && (
+                    <div className="actions">
+                      {n.actions.map((a,i) => <button key={i} onClick={(e)=>{e.stopPropagation(); toast({type:'info',title:a});}}>{a}</button>)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ─── COMPOSE VIEW (Admin / Scolarité only) ─── */}
+      {view==='compose' && isAdmin && (
+        <div style={{display:'grid', gridTemplateColumns:'1fr 320px', gap:18}}>
+          <div className="card">
+            <h3 style={{marginBottom:14}}>Compose notification</h3>
+
+            {/* Type selector */}
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Notification type</div>
+            <div className="segment" style={{marginBottom:16}}>
+              {[['info','Info'],['alert','Alert'],['reminder','Reminder'],['success','Success']].map(([k,l]) => (
+                <button key={k} className={compType===k?'active':''} onClick={()=>setCompType(k)}>{l}</button>
+              ))}
+            </div>
+
+            {/* Title */}
+            <div className="field" style={{marginBottom:12}}>
+              <label>Title</label>
+              <input value={compTitle} onChange={e=>setCompTitle(e.target.value)} placeholder="e.g. Grade submission deadline approaching" />
+            </div>
+
+            {/* Body */}
+            <div className="field" style={{marginBottom:12}}>
+              <label>Message</label>
+              <textarea value={compBody} onChange={e=>setCompBody(e.target.value)} placeholder="Write the notification message here…" rows={5} style={{width:'100%',resize:'vertical',fontFamily:'inherit',fontSize:13,padding:'10px 12px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg)'}}/>
+            </div>
+
+            {/* Quick templates */}
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Quick templates</div>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>
+              {[
+                {l:'Grade posted', ty:'success', ti:'New grades available', bd:'Your grades for the latest session have been posted. Check the Grades tab for details.'},
+                {l:'Grade deadline', ty:'reminder', ti:'Grade submission deadline', bd:'Please submit all pending grades before Friday at 23:59. Late submissions will not be accepted.'},
+                {l:'Absence alert', ty:'alert', ti:'Absence threshold exceeded', bd:'You have exceeded the allowed number of absences for this semester. Please contact the Scolarité office immediately.'},
+                {l:'Payment due', ty:'alert', ti:'Payment reminder', bd:'Your tuition payment is now overdue. Please settle your balance at the finance office or via bank transfer to avoid late fees.'},
+                {l:'Schedule change', ty:'info', ti:'Schedule update', bd:'There has been a change to your weekly schedule. Please check the Planning tab for updated session times and rooms.'},
+                {l:'Announcement', ty:'info', ti:'System announcement', bd:'CampusOps will undergo scheduled maintenance this weekend. The platform will be briefly unavailable on Saturday from 02:00 to 04:00.'},
+              ].map((tpl,i) => (
+                <button key={i} className="btn btn-ghost btn-sm" style={{fontSize:11}} onClick={()=>{setCompType(tpl.ty); setCompTitle(tpl.ti); setCompBody(tpl.bd); toast({type:'info',title:`Template loaded: ${tpl.l}`});}}>{tpl.l}</button>
+              ))}
+            </div>
+
+            {/* Send button */}
+            <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
+              <button className="btn btn-ghost" onClick={()=>{setCompTitle('');setCompBody('');setCompType('info');}}>Clear</button>
+              <button className="btn btn-primary" disabled={sending} onClick={handleSend}>{sending ? 'Sending…' : 'Send notification'}</button>
+            </div>
+          </div>
+
+          {/* Right sidebar — Recipients & Channels */}
+          <div>
+            <div className="card" style={{marginBottom:14}}>
+              <h3 style={{marginBottom:12}}>Recipients</h3>
+
+              <div className="field" style={{marginBottom:10}}>
+                <label>Audience</label>
+                <select value={compAudience} onChange={e=>setCompAudience(e.target.value)}>
+                  <option value="all">Everyone (all users)</option>
+                  <option value="all_students">All students</option>
+                  <option value="all_teachers">All teachers</option>
+                  <option value="group">Specific group</option>
+                  <option value="user">Specific user</option>
+                </select>
+              </div>
+
+              {compAudience === 'group' && (
+                <div className="field" style={{marginBottom:10}}>
+                  <label>Select group</label>
+                  <select value={compGroup} onChange={e=>setCompGroup(e.target.value)}>
+                    <option value="">— Choose a group —</option>
+                    {(window.GROUPS_LIST || []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {compAudience === 'user' && (
+                <div className="field" style={{marginBottom:10}}>
+                  <label>Search user</label>
+                  <select value={compUser} onChange={e=>setCompUser(e.target.value)}>
+                    <option value="">— Choose a user —</option>
+                    {(window.USERS_LIST || window.STUDENTS || []).map(u => <option key={u.id} value={u.id}>{u.name} {u.role ? `(${u.role})` : ''}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div style={{fontSize:11,color:'var(--text-3)',marginTop:6,padding:'8px 10px',background:'var(--hover)',borderRadius:6}}>
+                {compAudience === 'all' && 'This will be sent to all students, teachers, and staff.'}
+                {compAudience === 'all_students' && `Will reach ${(window.STUDENTS||[]).length || '~80'} students.`}
+                {compAudience === 'all_teachers' && `Will reach all registered teachers.`}
+                {compAudience === 'group' && (compGroup ? `Will reach all students in the selected group.` : 'Please select a group.')}
+                {compAudience === 'user' && (compUser ? `Will reach the selected user only.` : 'Please select a user.')}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 style={{marginBottom:12}}>Delivery channels</h3>
+              <p style={{fontSize:12,color:'var(--text-3)',marginBottom:10}}>Choose how to deliver this notification.</p>
+
+              {[
+                ['inapp', 'In-app notification', 'Appears in the notification bell inside CampusOps.'],
+                ['email', 'Email', 'Sent to the user\'s registered email address.'],
+                ['telegram', 'Telegram', 'Sent via @CampusOpsBot to linked accounts.'],
+                ['whatsapp', 'WhatsApp', 'Sent to the user\'s registered phone number.'],
+              ].map(([key, label, desc]) => (
+                <div key={key} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+                  <button className={`toggle ${compChannels[key]?'on':''}`} onClick={()=>toggleCh(key)} style={{flexShrink:0}}></button>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600}}>{label}</div>
+                    <div style={{fontSize:11,color:'var(--text-3)'}}>{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── SENT LOG VIEW (Admin / Scolarité only) ─── */}
+      {view==='history' && isAdmin && (
+        <div className="card">
+          <div className="card-head"><h3>Sent notifications log</h3><div className="meta">{sentLog.length} sent this session</div></div>
+          {sentLog.length === 0 && <div className="empty" style={{padding:30}}>No notifications sent yet this session. Go to the "Send" tab to compose one.</div>}
+          <table className="tbl" style={{marginTop:sentLog.length?8:0}}>
+            {sentLog.length > 0 && (
+              <thead><tr><th>Time</th><th>Type</th><th>Title</th><th>Audience</th><th>Channels</th></tr></thead>
+            )}
+            <tbody>
+              {sentLog.map(s => (
+                <tr key={s.id}>
+                  <td className="mono" style={{fontSize:12,whiteSpace:'nowrap'}}>{s.time}</td>
+                  <td><span className={`pill ${s.type==='alert'?'overdue':s.type==='success'?'paid':s.type==='reminder'?'partial':'active'}`}><span className="d"></span>{s.type}</span></td>
+                  <td><strong>{s.title}</strong><br/><span style={{fontSize:11,color:'var(--text-3)'}}>{s.body.substring(0,60)}…</span></td>
+                  <td style={{fontSize:12.5}}>{s.audience}</td>
+                  <td style={{fontSize:12}}>{s.channels.join(', ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }
