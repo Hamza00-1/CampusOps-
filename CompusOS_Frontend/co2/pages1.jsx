@@ -1,445 +1,333 @@
-// CampusOps — Dashboards, Planning, Absences, Payments
-const { useState: uS, useMemo: uM, useEffect: uE, useRef: uR } = React;
+// CampusOps — Pages part 1: Dashboard, Planning, Attendance, Modules, Grades, Branches
+const { useState: uSP, useMemo: uMP, useEffect: uEP, useRef: uRP } = React;
 
-// ───── Helpers ─────
-function StatCard({ label, value, delta, trend, icon, color='blue' }) {
-  const tCls = trend==='up'?'up':trend==='down'?'down':'flat';
-  const arrow = trend==='up'?'↑':trend==='down'?'↓':'→';
+const DAYS_EN = ['Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS_FR = ['Lun','Mar','Mer','Jeu','Ven','Sam'];
+const HOURS = [8,9,10,11,12,13,14,15,16,17,18];
+
+// ─── DASHBOARD ───
+function Dashboard({ role, toast, onNav }) {
+  const { t } = useI18n();
+  if (role === 'admin')      return <DashAdmin t={t} onNav={onNav} />;
+  if (role === 'scolarite')  return <DashScolarite t={t} onNav={onNav} />;
+  if (role === 'enseignant') return <DashTeacher t={t} onNav={onNav} />;
+  return <DashStudent t={t} onNav={onNav} />;
+}
+
+function StatCard({ icon, color, label, value, trend, trendDir }) {
   return (
     <div className="stat">
       <div className="stat-h">
-        <div className="stat-ic" style={{background:`var(--${color}-50)`,color:`var(--${color==='green'?'green-600':color})`}}>{icon}</div>
-        {delta && <span className={`trend ${tCls}`}>{arrow} {delta}</span>}
+        <div className="stat-ic" style={{background:color+'20', color}}><Icon name={icon} size={18} /></div>
+        {trend && <span className={`trend ${trendDir||'up'}`}>{trend}</span>}
       </div>
       <div className="stat-v">{value}</div>
       <div className="stat-l">{label}</div>
     </div>
   );
 }
-function Ring({ value, color='var(--blue)', size=56 }) {
-  const r = size/2 - 5, c = 2*Math.PI*r;
-  return (
-    <div className="ring-wrap" style={{width:size,height:size}}>
-      <svg viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#F1F5F9" strokeWidth="5"/>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={c*(1-value/100)} />
-      </svg>
-      <div className="rv" style={{color}}>{value}%</div>
-    </div>
-  );
-}
-function LineChart({ data, color='#5FA83C', height=200, fill=true, labels=[] }) {
-  const max = Math.max(...data)*1.1, min = Math.min(...data)*0.85;
-  const w = 520, pts = data.map((v,i)=>`${(i/(data.length-1))*w},${height-((v-min)/(max-min))*(height-20)-10}`).join(' ');
-  return (
-    <svg viewBox={`0 0 ${w} ${height+26}`} style={{width:'100%',height:'auto'}}>
-      {[0,0.25,0.5,0.75,1].map(p => <line key={p} x1={0} x2={w} y1={10+p*(height-20)} y2={10+p*(height-20)} stroke="#F1F5F9" strokeWidth="1"/>)}
-      {fill && <polygon points={`0,${height-10} ${pts} ${w},${height-10}`} fill={color} opacity="0.08"/>}
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
-      {data.map((v,i) => {
-        const x=(i/(data.length-1))*w, y=height-((v-min)/(max-min))*(height-20)-10;
-        return <circle key={i} cx={x} cy={y} r="3.5" fill="#fff" stroke={color} strokeWidth="2"/>;
-      })}
-      {labels.length>0 && labels.map((l,i) => <text key={i} x={(i/(labels.length-1))*w} y={height+20} fontSize="10" fill="#94A3B8" textAnchor="middle" fontFamily="ui-monospace">{l}</text>)}
-    </svg>
-  );
-}
-function BarChart({ data, labels, colors=['#5FA83C','#7CB342'], height=220 }) {
-  const max = Math.max(...data.flat())*1.15;
-  const groups = data[0].length, barW = 18, gap = 6, groupW = barW*data.length+gap*(data.length-1), slot = 520/groups;
-  return (
-    <svg viewBox={`0 0 520 ${height+30}`} style={{width:'100%',height:'auto'}}>
-      {[0,0.25,0.5,0.75,1].map(p => <line key={p} x1={0} x2={520} y1={10+p*(height-20)} y2={10+p*(height-20)} stroke="#F1F5F9"/>)}
-      {Array.from({length:groups}).map((_,i) => (
-        <g key={i} transform={`translate(${i*slot+slot/2-groupW/2},0)`}>
-          {data.map((series,s) => {
-            const h = (series[i]/max)*(height-20), y = height-10-h;
-            return <rect key={s} x={s*(barW+gap)} y={y} width={barW} height={h} fill={colors[s]} rx="3"/>;
-          })}
-          <text x={groupW/2} y={height+18} fontSize="10" fill="#94A3B8" textAnchor="middle">{labels[i]}</text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-function Donut({ slices, size=160 }) {
-  const total = slices.reduce((a,s)=>a+s.v,0);
-  let a = -Math.PI/2, r = size/2-10, cx=size/2, cy=size/2;
-  return (
-    <div style={{position:'relative',width:size,height:size,flexShrink:0}}>
-      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
-        {slices.map((s,i) => {
-          const ang = (s.v/total)*Math.PI*2;
-          const x1=cx+r*Math.cos(a), y1=cy+r*Math.sin(a);
-          const x2=cx+r*Math.cos(a+ang), y2=cy+r*Math.sin(a+ang);
-          const large = ang>Math.PI?1:0;
-          const d = `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z`;
-          a += ang;
-          return <path key={i} d={d} fill={s.c}/>;
-        })}
-        <circle cx={cx} cy={cy} r={r*0.62} fill="#fff"/>
-      </svg>
-      <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
-        <div style={{fontSize:22,fontWeight:800,fontFamily:'var(--head-font)',color:'var(--text)'}}>{total}</div>
-        <div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1}}>Total</div>
-      </div>
-    </div>
-  );
-}
 
-// ───── Dashboards ─────
-function Dashboard({ role, toast, onNav }) {
-  const today = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const user = ROLES[role];
-  const greeting = (()=>{ const h=new Date().getHours(); return h<12?'Good morning':h<18?'Good afternoon':'Good evening'; })();
-
+function DashAdmin({ t, onNav }) {
   return (
     <>
       <div className="page-head">
         <div>
-          <div style={{fontSize:12,color:'var(--text-3)',marginBottom:4,fontWeight:500}}>{today}</div>
-          <h1>{greeting}, {user.name.split(' ')[0]}.</h1>
-          <div className="sub">Here's what's happening on your {user.label.toLowerCase()} workspace today.</div>
-        </div>
-        <div className="page-actions">
-          <button className="btn btn-ghost btn-sm" onClick={()=>{const d={students:STUDENTS.length,modules:MODULES.length,groups:GROUPS_LIST.length,payments:PAYMENTS.length};const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='campusops_dashboard.json';a.click();toast({title:'Dashboard exported',type:'success'})}}>⤓ Export</button>
-          {role==='admin'||role==='scolarite' ? <button className="btn btn-primary btn-sm" onClick={()=>onNav('planning')}>+ New session</button> : null}
+          <h1>{t('nav.Dashboard')}</h1>
+          <div className="sub">System overview — {ROLES.admin.name}</div>
         </div>
       </div>
-
-      {role==='admin' && <AdminDash onNav={onNav} />}
-      {role==='scolarite' && <ScolDash onNav={onNav} />}
-      {role==='enseignant' && <TeachDash onNav={onNav} />}
-      {role==='etudiant' && <StudDash onNav={onNav} />}
-    </>
-  );
-}
-
-function AdminDash({ onNav }) {
-  return (
-    <>
       <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard label="Total students"     value="577"     delta="+28 this sem"   trend="up"   icon="◍" color="blue" />
-        <StatCard label="Absence rate"       value="9.4%"    delta="−1.2%"          trend="up"   icon="✗" color="green" />
-        <StatCard label="Monthly revenue"    value="1.28M"   delta="+8.2%"          trend="up"   icon="❐" color="green" />
-        <StatCard label="Overdue invoices"   value="14"      delta="+3"             trend="down" icon="⚠" color="red" />
+        <StatCard icon="users"    color="#5FA83C" label="Total students"   value="577"    trend="+12 this week" trendDir="up" />
+        <StatCard icon="groups"   color="#7C3AED" label="Active groups"    value="24"     trend="+1"            trendDir="up" />
+        <StatCard icon="branches" color="#F59E0B" label="Branches"         value="4"      trend="stable"        trendDir="flat" />
+        <StatCard icon="users"    color="#0891B2" label="Faculty"          value="78"     trend="+3"            trendDir="up" />
       </div>
       <div className="grid-2-1" style={{marginBottom:14}}>
         <div className="card">
           <div className="card-head">
-            <div>
-              <h3>Payments — collected vs expected</h3>
-              <div className="meta">Last 8 months · MAD (thousands)</div>
-            </div>
-            <div className="segment">
-              <button className="active">Year</button>
-              <button>Qtr</button>
-              <button>Month</button>
-            </div>
+            <h3>Branches at a glance</h3>
+            <button className="link" onClick={()=>onNav('branches')}>{t('btn.viewAll')}</button>
           </div>
-          <BarChart
-            data={[[820,910,1040,980,1120,1080,1210,1280],[900,1000,1100,1050,1200,1150,1300,1350]]}
-            labels={['Mar','Apr','May','Jun','Jul','Aug','Sep','Oct']}
-            colors={['#5FA83C','#CFE0F4']}
-            height={220}
-          />
-          <div style={{display:'flex',gap:18,marginTop:10,fontSize:12,color:'var(--text-2)'}}>
-            <span style={{display:'flex',alignItems:'center',gap:6}}><span style={{width:10,height:10,background:'#5FA83C',borderRadius:2,display:'inline-block'}}/>Collected</span>
-            <span style={{display:'flex',alignItems:'center',gap:6}}><span style={{width:10,height:10,background:'#CFE0F4',borderRadius:2,display:'inline-block'}}/>Expected</span>
-          </div>
+          <table className="tbl">
+            <thead><tr><th>Branch</th><th>Head</th><th>Students</th><th>Groups</th></tr></thead>
+            <tbody>
+              {BRANCHES.map(b => (
+                <tr key={b.code}>
+                  <td><div style={{display:'flex',alignItems:'center',gap:10}}><span className="av av-xs" style={{background:b.color}}>{b.code.slice(0,2)}</span><strong>{b.name}</strong></div></td>
+                  <td>{b.head}</td>
+                  <td className="mono">{b.students}</td>
+                  <td className="mono">{b.groups}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
         <div className="card">
-          <div className="card-head"><h3>System alerts</h3><span className="badge red">3</span></div>
-          {[
-            {t:'Absence threshold exceeded',d:'Mehdi Alami — 6 missed sessions',c:'red',ic:'⚠'},
-            {t:'4 overdue invoices',d:'L3-INFO-A — 48,500 MAD total',c:'red',ic:'❐'},
-            {t:'Grade deadline — CS301',d:'Due Friday Oct 25',c:'orange',ic:'⏰'},
-            {t:'New group created',d:'L3-INFO-A · 2024-25',c:'green',ic:'✓'},
-          ].map((a,i) => (
-            <div key={i} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:i<3?'1px solid var(--border)':'0'}}>
-              <div style={{width:32,height:32,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:`var(--${a.c==='red'?'red':a.c==='green'?'green':'orange'}-50)`,color:`var(--${a.c==='red'?'red':a.c==='green'?'green-600':'orange'})`,flexShrink:0,fontSize:13}}>{a.ic}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:12.5,fontWeight:600}}>{a.t}</div>
-                <div style={{fontSize:11.5,color:'var(--text-2)',marginTop:1}}>{a.d}</div>
+          <div className="card-head"><h3>Recent activity</h3></div>
+          {NOTIFICATIONS.slice(0,5).map(n => (
+            <div key={n.id} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+              <span style={{width:6,height:6,borderRadius:'50%',background:n.type==='alert'?'var(--red)':n.type==='success'?'var(--green)':'var(--accent)',marginTop:6,flexShrink:0}}></span>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{fontSize:13,fontWeight:600}}>{n.title}</div>
+                <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>{n.time}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
-      <div className="grid-2">
+    </>
+  );
+}
+
+function DashScolarite({ t, onNav }) {
+  const s = SCOLARITE_STATS;
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{t('nav.Dashboard')}</h1>
+          <div className="sub">Scolarité — academic operations</div>
+        </div>
+      </div>
+      <div className="grid-4" style={{marginBottom:14}}>
+        <StatCard icon="users"    color="#5FA83C" label="Total students"      value={s.totalStudents} trend="+8 this week" trendDir="up" />
+        <StatCard icon="groups"   color="#7C3AED" label="Active groups"       value={s.totalGroups}   trend="stable" trendDir="flat" />
+        <StatCard icon="absences" color="#0891B2" label="Attendance rate"     value={s.attendanceRate+'%'} trend="−1.2%" trendDir="down" />
+        <StatCard icon="payments" color="#F59E0B" label="Collection rate"     value={s.collectionRate+'%'} trend="+2.4%" trendDir="up" />
+      </div>
+      <div className="grid-2-1" style={{marginBottom:14}}>
         <div className="card">
-          <div className="card-head"><h3>Branches distribution</h3><span className="meta">577 students</span></div>
-          <div style={{display:'flex',gap:24,alignItems:'center'}}>
-            <Donut slices={BRANCHES.map(b=>({v:b.students,c:b.color}))} />
-            <div style={{flex:1}}>
-              {BRANCHES.map(b => (
-                <div key={b.code} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0'}}>
-                  <span style={{width:8,height:8,borderRadius:2,background:b.color}}/>
-                  <span style={{flex:1,fontSize:12.5}}>{b.name}</span>
-                  <span style={{fontSize:12,fontWeight:700}}>{b.students}</span>
+          <div className="card-head"><h3>Pending requests</h3></div>
+          <div className="empty" style={{padding:'30px 20px'}}>{s.activeRequests} pending administrative requests. Click to review.</div>
+        </div>
+        <div className="card">
+          <div className="card-head"><h3>Outstanding payments</h3><span className="badge orange">{s.pendingPayments}</span></div>
+          <div style={{fontSize:13, color:'var(--text-2)', lineHeight:1.6}}>
+            <div style={{marginBottom:6}}><strong>{s.pendingPayments}</strong> invoices awaiting payment</div>
+            <button className="btn btn-ghost btn-sm" onClick={()=>onNav('payments')}>Review payments</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function DashTeacher({ t, onNav }) {
+  const teacherSessions = SESSIONS.filter(s => s.teacher === 'Prof. L. Bennani' || s.mod === 'CS301');
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{t('nav.Dashboard')}</h1>
+          <div className="sub">{ROLES.enseignant.name} — {ROLES.enseignant.field}</div>
+        </div>
+      </div>
+      <div className="grid-4" style={{marginBottom:14}}>
+        <StatCard icon="modules"  color="#5FA83C" label="My modules"          value="3" />
+        <StatCard icon="groups"   color="#7C3AED" label="Active groups"       value="4" />
+        <StatCard icon="users"    color="#F59E0B" label="Students taught"     value="76" />
+        <StatCard icon="planning" color="#0891B2" label="Sessions this week"  value={teacherSessions.length} />
+      </div>
+      <div className="grid-2-1" style={{marginBottom:14}}>
+        <div className="card">
+          <div className="card-head">
+            <h3>Today's sessions</h3>
+            <button className="link" onClick={()=>onNav('planning')}>{t('btn.viewAll')}</button>
+          </div>
+          <table className="tbl">
+            <thead><tr><th>Time</th><th>Module</th><th>Group</th><th>Room</th></tr></thead>
+            <tbody>
+              {teacherSessions.slice(0,5).map((s,i) => {
+                const M = MODULES.find(m=>m.code===s.mod) || {};
+                return (
+                  <tr key={i}>
+                    <td className="mono">{String(Math.floor(s.start)).padStart(2,'0')}:{String(Math.round((s.start%1)*60)).padStart(2,'0')}</td>
+                    <td><strong>{M.name||s.mod}</strong></td>
+                    <td>{s.grp}</td>
+                    <td className="mono">{s.room}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="card">
+          <div className="card-head"><h3>Pending grading</h3></div>
+          <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7}}>
+            <div style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>CS301 midterm — 28 submissions</div>
+            <div style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>CS301 homework #4 — 14 pending</div>
+            <button className="btn btn-primary btn-sm" style={{marginTop:10}} onClick={()=>onNav('grades')}>Open grades</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function StudentChart({ history }) {
+  const W=560, H=180, P={top:20,right:20,bottom:30,left:30};
+  const max = 20, min = 8;
+  const xs = history.labels.map((_,i) => P.left + (i/(history.labels.length-1))*(W-P.left-P.right));
+  const yOf = v => P.top + (1 - (v-min)/(max-min)) * (H-P.top-P.bottom);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'auto'}}>
+      {[10,12,14,16,18,20].map(g => (
+        <g key={g}>
+          <line x1={P.left} x2={W-P.right} y1={yOf(g)} y2={yOf(g)} stroke="var(--border)" strokeWidth="1" strokeDasharray="2 4"/>
+          <text x={P.left-6} y={yOf(g)+3} fontSize="9" fill="var(--text-3)" textAnchor="end" fontFamily="var(--mono)">{g}</text>
+        </g>
+      ))}
+      {history.labels.map((l,i)=>(<text key={i} x={xs[i]} y={H-8} fontSize="10" fill="var(--text-3)" textAnchor="middle">{l}</text>))}
+      {history.series.map(s => {
+        const path = s.values.map((v,i)=>`${i===0?'M':'L'}${xs[i]},${yOf(v)}`).join(' ');
+        return (
+          <g key={s.module}>
+            <path d={path} fill="none" stroke={s.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            {s.values.map((v,i)=>(<circle key={i} cx={xs[i]} cy={yOf(v)} r="3" fill={s.color}/>))}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function DashStudent({ t, onNav }) {
+  const me = ROLES.etudiant;
+  const overall = (STUDENT_GRADES.reduce((a,g)=>a+g.average,0)/STUDENT_GRADES.length).toFixed(2);
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{t('nav.Dashboard')}</h1>
+          <div className="sub">{me.name} — Group <strong>{me.group}</strong></div>
+        </div>
+      </div>
+      <div className="grid-4" style={{marginBottom:14}}>
+        <StatCard icon="grades"   color="#5FA83C" label="Overall average"  value={overall+'/20'} trend="+0.4" trendDir="up" />
+        <StatCard icon="absences" color="#0891B2" label="Attendance"       value="96%"           trend="+1%"  trendDir="up" />
+        <StatCard icon="modules"  color="#F59E0B" label="Active modules"   value={STUDENT_GRADES.length} />
+        <StatCard icon="planning" color="#7C3AED" label="Upcoming sessions" value="6" />
+      </div>
+      <div className="grid-2-1" style={{marginBottom:14}}>
+        <div className="card">
+          <div className="card-head">
+            <h3>Grades evolution</h3>
+            <div style={{display:'flex',gap:14,fontSize:11.5,color:'var(--text-2)'}}>
+              {STUDENT_GRADE_HISTORY.series.map(s => (
+                <div key={s.module} style={{display:'flex',alignItems:'center',gap:5}}>
+                  <span style={{width:10,height:3,borderRadius:2,background:s.color,display:'inline-block'}}></span>{s.module}
                 </div>
               ))}
             </div>
           </div>
+          <StudentChart history={STUDENT_GRADE_HISTORY} />
         </div>
         <div className="card">
-          <div className="card-head"><h3>Top performing groups</h3></div>
-          {GROUPS_LIST.slice(0,5).map((g,i) => {
-            const avg = [15.8,14.2,16.1,13.7,14.9][i];
-            return (
-              <div key={g.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:i<4?'1px solid var(--border)':'0'}}>
-                <div className="av av-sm" style={{background:'linear-gradient(135deg,#5FA83C,#7CB342)'}}>{g.id.split('-')[0]}</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:600}}>{g.name}</div>
-                  <div style={{fontSize:11,color:'var(--text-3)'}}>{g.students} students · {g.branch}</div>
-                </div>
-                <div style={{width:120}}><div className="pbar"><span style={{width:`${(avg/20)*100}%`,background:avg>14?'var(--green)':'var(--orange)'}}/></div></div>
-                <div style={{fontSize:13,fontWeight:700,width:44,textAlign:'right',fontFamily:'var(--head-font)'}}>{avg}</div>
+          <div className="card-head"><h3>Latest grades</h3></div>
+          {STUDENT_GRADES.slice(0,5).map(g => (
+            <div key={g.module} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:600}}>{g.name}</div>
+                <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{g.module}</div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-    </>
-  );
-}
-
-function ScolDash({ onNav }) {
-  return (
-    <>
-      <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard label="Active enrollments" value="577"   delta="+12"     trend="up"   icon="◍" color="blue"/>
-        <StatCard label="Pending justifications" value="23" delta="+8"     trend="down" icon="⏰" color="orange"/>
-        <StatCard label="Collected (Q2)"     value="1.28M" delta="+8.2%"   trend="up"   icon="❐" color="green"/>
-        <StatCard label="Outstanding"        value="186K"  delta="−12K"    trend="up"   icon="⚠" color="red"/>
-      </div>
-      <div className="grid-2-1" style={{marginBottom:14}}>
-        <div className="card">
-          <div className="card-head"><h3>Revenue trend</h3><div className="meta">YTD 2024 · MAD (thousands)</div></div>
-          <LineChart data={[820,910,1040,980,1120,1080,1210,1280]} labels={['Mar','Apr','May','Jun','Jul','Aug','Sep','Oct']}/>
-        </div>
-        <div className="card">
-          <div className="card-head"><h3>Overdue alerts</h3><span className="badge red">14</span></div>
-          {PAYMENTS.filter(p=>p.status==='overdue').slice(0,5).map((p,i,a) => (
-            <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:i<a.length-1?'1px solid var(--border)':'0'}}>
-              <div className="av av-xs" style={{background:'var(--red)'}}>{(p.student || '').split(' ').map(x=>x[0]).join('')}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:12.5,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.student}</div>
-                <div style={{fontSize:11,color:'var(--text-3)'}}>{p.id} · {p.group}</div>
-              </div>
-              <div style={{fontSize:12,fontWeight:700}}>{p.amount.toLocaleString()}</div>
+              <div style={{fontSize:18,fontWeight:800,color:g.average>=14?'var(--green)':g.average>=10?'var(--orange)':'var(--red)',fontFamily:'var(--head-font)'}}>{g.average.toFixed(1)}</div>
             </div>
           ))}
+          <button className="btn btn-ghost btn-sm" style={{marginTop:10,width:'100%'}} onClick={()=>onNav('grades')}>{t('btn.viewAll')}</button>
         </div>
       </div>
     </>
   );
 }
 
-function TeachDash({ onNav }) {
-  return (
-    <>
-      <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard label="Today's classes"      value="3"      delta="2 remaining" trend="flat" icon="▦" color="blue"/>
-        <StatCard label="Class performance"    value="14.2"   delta="+0.4"       trend="up"   icon="◴" color="green"/>
-        <StatCard label="Absence alerts"       value="4"      delta="+1"         trend="down" icon="⚠" color="red"/>
-        <StatCard label="Pending grades"       value="28"     delta="−12"        trend="up"   icon="✎" color="orange"/>
-      </div>
-      <div className="grid-2-1" style={{marginBottom:14}}>
-        <div className="card">
-          <div className="card-head"><h3>Course progress — CS301</h3><div className="meta">Chapter completion · 12 chapters</div></div>
-          <LineChart data={[2,3,4,5,6,8,9,10,11]} labels={['W1','W2','W3','W4','W5','W6','W7','W8','W9']} color="#5FA83C"/>
-        </div>
-        <div className="card">
-          <div className="card-head"><h3>Today's planning</h3><span className="meta">Tue, Oct 22</span></div>
-          {[
-            {t:'08:00 — 10:00',m:'PH210 Quantum Physics',g:'L1-PHYS',r:'Lab C-12',c:'#7C3AED',done:true},
-            {t:'13:00 — 14:30',m:'EN150 Business English',g:'L3-INFO-A',r:'A-305',c:'#F59E0B',done:false,now:true},
-            {t:'15:00 — 17:00',m:'CS420 Distributed Systems',g:'M1-IA',r:'B-301',c:'#DC2626',done:false},
-          ].map((s,i,a) => (
-            <div key={i} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:i<a.length-1?'1px solid var(--border)':'0',opacity:s.done?0.55:1}}>
-              <div style={{width:3,borderRadius:2,background:s.c,flexShrink:0}}/>
-              <div style={{flex:1}}>
-                <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'ui-monospace',fontWeight:600}}>{s.t}{s.now && <span className="badge blue" style={{marginLeft:8,fontSize:9,padding:'1px 6px'}}>NOW</span>}</div>
-                <div style={{fontSize:13,fontWeight:600,margin:'2px 0'}}>{s.m}</div>
-                <div style={{fontSize:11,color:'var(--text-2)'}}>{s.g} · Room {s.r}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
-}
-
-function StudDash({ onNav }) {
-  return (
-    <>
-      <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard label="My average"        value="15.8/20" delta="+0.4"  trend="up"   icon="◴" color="green"/>
-        <StatCard label="Attendance rate"   value="96%"     delta="+2%"   trend="up"   icon="✓" color="blue"/>
-        <StatCard label="Next class"        value="14:00"   delta="in 42m" trend="flat" icon="▦" color="orange"/>
-        <StatCard label="Balance due"       value="0 MAD"   delta="Paid"  trend="up"   icon="❐" color="green"/>
-      </div>
-      <div className="grid-2-1" style={{marginBottom:14}}>
-        <div className="card">
-          <div className="card-head"><h3>Grade evolution</h3><div className="meta">All modules · semester 1</div></div>
-          <LineChart data={[13.2,14.1,13.8,14.5,15.1,15.3,15.6,15.8]} labels={['W1','W2','W3','W4','W5','W6','W7','W8']} color="#7CB342"/>
-        </div>
-        <div className="card">
-          <div className="card-head"><h3>Notifications</h3><span className="badge blue">3 new</span></div>
-          {NOTIFICATIONS.slice(0,4).map(n => {
-            const c = n.type==='alert'?'red':n.type==='success'?'green':n.type==='reminder'?'orange':'blue';
-            return (
-              <div key={n.id} style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
-                <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:3}}>
-                  <span style={{width:6,height:6,borderRadius:'50%',background:`var(--${c==='green'?'green':c})`}}/>
-                  <span style={{fontSize:12.5,fontWeight:600}}>{n.title}</span>
-                </div>
-                <div style={{fontSize:11.5,color:'var(--text-2)',marginLeft:14}}>{n.desc}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div className="card">
-        <div className="card-head"><h3>My modules this semester</h3><span className="meta">6 modules · 29 credits</span></div>
-        <div className="grid-3">
-          {MODULES.map(m => {
-            const g = [15.8,14.2,16.4,13.9,17.1,14.6][MODULES.indexOf(m)];
-            return (
-              <div key={m.code} style={{padding:14,border:'1px solid var(--border)',borderRadius:10,borderLeft:`3px solid ${m.color}`}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                  <div>
-                    <div style={{fontSize:11,fontFamily:'ui-monospace',color:'var(--text-3)',fontWeight:600}}>{m.code}</div>
-                    <div style={{fontSize:13,fontWeight:700,marginTop:2}}>{m.name}</div>
-                  </div>
-                  <div style={{fontSize:18,fontWeight:800,fontFamily:'var(--head-font)',color:m.color}}>{g}</div>
-                </div>
-                <div style={{fontSize:11,color:'var(--text-2)',marginBottom:8}}>{m.teacher} · {m.credits} credits</div>
-                <div className="pbar"><span style={{width:`${(g/20)*100}%`,background:m.color}}/></div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ───── Planning ─────
+// ─── PLANNING ───
 function Planning({ role, toast }) {
-  const [groupFilter, setGroupFilter] = uS('all');
-  const [modFilter, setModFilter] = uS('all');
-  const [selected, setSelected] = uS(null);
-  const [showNew, setShowNew] = uS(false);
-  const [newForm, setNewForm] = uS({moduleId:'',groupId:'',teacherId:'',room:'',day:0,startH:8,dur:2});
-  const [saving, setSaving] = uS(false);
-  const days = ['Mon','Tue','Wed','Thu','Fri','Sat'];
-  const dates = [20,21,22,23,24,25];
-  const todayIdx = 1;
-  const hours = [8,9,10,11,12,13,14,15,16,17,18];
+  const { t, lang } = useI18n();
+  const [view, setView] = uSP(()=> localStorage.getItem('co2_planning_view') || 'week');
+  const [day, setDay] = uSP(0);
+  const [editing, setEditing] = uSP(null);
+  const [adding, setAdding] = uSP(false);
+  const [localSessions, setLocalSessions] = uSP(null);
+  const [form, setForm] = uSP({ mod:'', grp:'', day:0, room:'', start:9, dur:1.5 });
+  uEP(()=> localStorage.setItem('co2_planning_view', view), [view]);
 
-  // Role-based filtering: teacher sees only sessions with their modules, student sees only their group
-  const roleFiltered = SESSIONS.filter(s => {
-    if (role==='enseignant') return s.teacherId === window._userId;
-    if (role==='etudiant') { const ug = window._userGroups || []; if(ug.length===0) return false; return ug.includes(s.grp); }
-    return true;
-  });
-  const filtered = roleFiltered.filter(s => (groupFilter==='all'||s.grp===groupFilter)&&(modFilter==='all'||s.mod===modFilter||MODULES.find(m=>(m.code===modFilter||m.name===modFilter)&&(m.code===s.mod||m.name===s.mod))));
+  const me = ROLES.etudiant;
+  const allSessions = localSessions || SESSIONS;
+  let sessions = allSessions;
+  if (role==='etudiant') sessions = sessions.filter(s => s.grp === me.group);
+  if (role==='enseignant') sessions = sessions.filter(s => s.teacher === ROLES.enseignant.name || s.mod === 'CS301');
 
-  async function createSession(e) {
-    e.preventDefault(); setSaving(true);
-    try {
-      const base = new Date(); base.setDate(base.getDate() - base.getDay() + 1 + newForm.day);
-      const start = new Date(base); start.setHours(newForm.startH, 0, 0, 0);
-      const end = new Date(base); end.setHours(newForm.startH + newForm.dur, 0, 0, 0);
-      await window.api.request('/planning', { method:'POST', body: {
-        moduleId: newForm.moduleId, groupId: newForm.groupId, teacherId: newForm.teacherId || window._userId,
-        room: newForm.room, startTime: start.toISOString(), endTime: end.toISOString()
-      }});
-      toast({title:'Session created',type:'success'}); setShowNew(false); window.location.reload();
-    } catch(err) { toast({title:'Error',desc:err.message,type:'error'}); }
-    finally { setSaving(false); }
-  }
+  const canEdit = role==='admin' || role==='scolarite';
+  const days = lang==='fr' ? DAYS_FR : DAYS_EN;
 
-  async function deleteSession(id) {
-    try { await window.api.request(`/planning/${id}`, {method:'DELETE'}); toast({title:'Session deleted',type:'success'}); setSelected(null); window.location.reload(); }
-    catch(err) { toast({title:'Error',desc:err.message,type:'error'}); }
-  }
+  const openEdit = (s) => {
+    setForm({ mod: s.mod||'', grp: s.grp||'', day: s.day||0, room: s.room||'', start: s.start||9, dur: s.dur||1.5 });
+    setEditing(s);
+  };
+
+  const openAdd = () => {
+    setForm({ mod: MODULES[0]?.code||'', grp: GROUPS_LIST[0]?.name||GROUPS_LIST[0]?.id||'', day:0, room:'', start:9, dur:1.5 });
+    setAdding(true);
+  };
+
+  const saveSession = () => {
+    if (adding) {
+      const newS = { id: Math.random().toString(36).slice(2,10), ...form, day: parseInt(form.day), start: parseFloat(form.start)||9, dur: parseFloat(form.dur)||1.5 };
+      setLocalSessions([...allSessions, newS]);
+      toast({ type:'success', title:'Session created', desc:'Added to the schedule.' });
+    } else {
+      setLocalSessions(allSessions.map(s => s===editing ? { ...s, ...form, day: parseInt(form.day), start: parseFloat(form.start)||9, dur: parseFloat(form.dur)||1.5 } : s));
+      toast({ type:'success', title:'Session updated', desc:'Changes saved.' });
+    }
+    setEditing(null);
+    setAdding(false);
+  };
+
+  const closeModal = () => { setEditing(null); setAdding(false); };
 
   return (
     <>
       <div className="page-head">
         <div>
-          <h1>Planning</h1>
-          <div className="sub">Weekly timetable · {filtered.length} sessions</div>
+          <h1>{t('nav.Planning')}</h1>
+          <div className="sub">
+            {role==='etudiant' && <>Schedule for group <strong>{me.group}</strong></>}
+            {role==='enseignant' && <>Sessions taught by <strong>{ROLES.enseignant.name}</strong></>}
+            {(role==='admin'||role==='scolarite') && <>Full schedule — week of Oct 21, 2024</>}
+          </div>
         </div>
         <div className="page-actions">
           <div className="segment">
-            <button>Day</button>
-            <button className="active">Week</button>
-            <button>Month</button>
+            <button className={view==='day'?'active':''} onClick={()=>setView('day')}>{t('view.day')}</button>
+            <button className={view==='week'?'active':''} onClick={()=>setView('week')}>{t('view.week')}</button>
+            <button className={view==='month'?'active':''} onClick={()=>setView('month')}>{t('view.month')}</button>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={()=>{const rows=['Day,Time,Module,Group,Room',...filtered.map(s=>`${days[s.day]||s.day},${s.start}:00,${s.mod},${s.grp},${s.room}`)];const b=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='planning.csv';a.click();toast({title:'Planning exported',type:'success'})}}>⤓ Export</button>
-          {(role==='admin'||role==='scolarite') && <button className="btn btn-primary btn-sm" onClick={()=>setShowNew(true)}>+ New session</button>}
+          {canEdit && <button className="btn btn-primary btn-sm" onClick={openAdd}><Icon name="plus" size={14}/>{lang==='fr'?'Ajouter':'Add session'}</button>}
         </div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'260px 1fr',gap:14}}>
-        <div className="card" style={{padding:16,height:'fit-content'}}>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Filters</div>
-          <div className="field">
-            <label>Search</label>
-            <input placeholder="Session, module…"/>
-          </div>
-          <div className="field">
-            <label>Group</label>
-            <select value={groupFilter} onChange={e=>setGroupFilter(e.target.value)}>
-              <option value="all">All groups</option>
-              {GROUPS_LIST.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label>Module</label>
-            <select value={modFilter} onChange={e=>setModFilter(e.target.value)}>
-              <option value="all">All modules</option>
-              {MODULES.map(m => <option key={m.code} value={m.code}>{m.code} — {m.name}</option>)}
-            </select>
-          </div>
-          <div style={{height:1,background:'var(--border)',margin:'14px 0'}}/>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:10}}>Modules</div>
-          {MODULES.map(m => (
-            <div key={m.code} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',fontSize:12}}>
-              <span style={{width:10,height:10,borderRadius:3,background:m.color}}/>
-              <span style={{flex:1}}>{m.code}</span>
-              <span style={{color:'var(--text-3)',fontSize:11}}>{m.credits}cr</span>
-            </div>
-          ))}
-        </div>
+
+      {sessions.length===0 && (
+        <div className="card"><div className="empty">No sessions to display for the current view.</div></div>
+      )}
+
+      {sessions.length>0 && view==='week' && (
         <div className="tt">
-          <div style={{background:'#F8FAFC',borderRight:'1px solid var(--border)',borderBottom:'1px solid var(--border)'}}></div>
-          {days.map((d,i) => (
-            <div key={d} className={`tt-h ${i===todayIdx?'today':''}`}>
-              <div>{d}</div>
-              <div className="dn">{dates[i]}</div>
-            </div>
-          ))}
-          {hours.map(h => (
+          <div className="tt-h"></div>
+          {days.map((d,i) => <div key={i} className={`tt-h ${i===0?'today':''}`}>{d}<div className="dn">{21+i}</div></div>)}
+          {HOURS.map(h => (
             <React.Fragment key={h}>
               <div className="tt-time">{String(h).padStart(2,'0')}:00</div>
-              {days.map((_,d) => {
-                const sess = filtered.filter(s => s.day===d && s.start===h);
+              {days.map((_,di) => {
+                const evs = sessions.filter(s => s.day===di && Math.floor(s.start)===h);
                 return (
-                  <div key={d} className="tt-cell">
-                    {sess.map((s,i) => {
-                      const mod = MODULES.find(m=>m.code===s.mod||m.name===s.mod) || {code:s.mod,name:s.mod,color:'#64748B',credits:4,teacher:'—'};
-                      const top = 0;
+                  <div key={di} className="tt-cell">
+                    {evs.map((e,i) => {
+                      const M = MODULES.find(m=>m.code===e.mod||m.name===e.mod) || {color:'#5FA83C',name:e.mod};
                       return (
-                        <div key={i} className="tt-ev" onClick={()=>setSelected(s)} style={{top:top+2,height:s.dur*58-4,borderLeftColor:mod.color,background:`${mod.color}0a`}}>
-                          <div className="mod">{s.mod}</div>
-                          <div className="gr">{s.grp}</div>
-                          <div className="rm">{s.room}</div>
+                        <div key={i} className="tt-ev" style={{borderLeftColor:M.color, top:(e.start-h)*60+2, height:e.dur*60-4}} onClick={()=> canEdit ? openEdit(e) : toast({type:'info',title:M.name||e.mod,desc:`${e.grp} • ${e.room}`})}>
+                          <div className="mod">{M.name||e.mod}</div>
+                          <div className="gr">{e.grp}</div>
+                          <div className="rm">{e.room}</div>
                         </div>
                       );
                     })}
@@ -449,120 +337,327 @@ function Planning({ role, toast }) {
             </React.Fragment>
           ))}
         </div>
-      </div>
-      <div className={`drawer-bg ${selected?'open':''}`} onClick={()=>setSelected(null)}/>
-      <div className={`drawer ${selected?'open':''}`}>
-        {selected && (() => {
-          const mod = MODULES.find(m=>m.code===selected.mod||m.name===selected.mod) || {code:selected.mod,name:selected.mod,color:'#64748B',credits:4,teacher:'—'};
-          return (
-            <>
-              <div className="drawer-head">
-                <div>
-                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-                    <span style={{width:10,height:10,borderRadius:3,background:mod.color}}/>
-                    <span style={{fontSize:11,fontFamily:'ui-monospace',color:'var(--text-3)',fontWeight:600}}>{mod.code}</span>
-                  </div>
-                  <h3 style={{fontSize:16}}>{mod.name}</h3>
-                </div>
-                <button className="tb-btn" onClick={()=>setSelected(null)}>×</button>
-              </div>
-              <div className="drawer-body">
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:18}}>
-                  <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,fontWeight:700}}>Day</div><div style={{fontSize:13,fontWeight:600,marginTop:3}}>{days[selected.day]} Oct {dates[selected.day]}</div></div>
-                  <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,fontWeight:700}}>Time</div><div style={{fontSize:13,fontWeight:600,marginTop:3}}>{String(selected.start).padStart(2,'0')}:00 — {String(selected.start+selected.dur).padStart(2,'0')}:{selected.dur%1?'30':'00'}</div></div>
-                  <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,fontWeight:700}}>Group</div><div style={{fontSize:13,fontWeight:600,marginTop:3}}>{selected.grp}</div></div>
-                  <div><div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,fontWeight:700}}>Room</div><div style={{fontSize:13,fontWeight:600,marginTop:3}}>{selected.room}</div></div>
-                </div>
-                <div style={{padding:14,background:'var(--bg)',borderRadius:10,marginBottom:18}}>
-                  <div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,fontWeight:700,marginBottom:6}}>Teacher</div>
-                  <div style={{display:'flex',alignItems:'center',gap:10}}>
-                    <div className="av av-sm" style={{background:mod.color}}>{mod.teacher.split(' ').slice(-2).map(p=>p[0]).join('')}</div>
-                    <div><div style={{fontSize:13,fontWeight:600}}>{mod.teacher}</div><div style={{fontSize:11,color:'var(--text-3)'}}>{mod.credits} credits</div></div>
-                  </div>
-                </div>
-                <div style={{fontSize:10,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,fontWeight:700,marginBottom:8}}>Description</div>
-                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.6}}>Core lecture session. Attendance will be recorded via the Attendance module.</p>
-              </div>
-              <div className="drawer-foot">
-                <button className="btn btn-ghost btn-sm" onClick={()=>setSelected(null)}>Close</button>
-                {(role==='admin'||role==='scolarite') && selected.id && <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={()=>deleteSession(selected.id)}>Delete</button>}
-                {(role==='admin'||role==='scolarite'||role==='enseignant') && <button className="btn btn-primary btn-sm" onClick={async()=>{
-                  if(!selected.id){toast({title:'Session updated',type:'success'});setSelected(null);return;}
-                  const room=prompt('Room:',selected.room); if(!room) return;
-                  try{await window.api.request(`/planning/${selected.id}`,{method:'PUT',body:{room}});toast({title:'Session updated',type:'success'});setSelected(null);window.location.reload();}
-                  catch(err){toast({title:'Error',desc:err.message,type:'error'});}
-                }}>Edit session</button>}
-              </div>
-            </>
-          );
-        })()}
-      </div>
+      )}
 
-      {/* New Session Modal */}
-      {showNew && <>
-        <div className="drawer-bg open" onClick={()=>setShowNew(false)}/>
-        <div className="drawer open">
-          <div className="drawer-head"><div><h3>New Session</h3></div><button className="tb-btn" onClick={()=>setShowNew(false)}>×</button></div>
-          <form className="drawer-body" onSubmit={createSession}>
-            <div className="field"><label>Module</label><select required value={newForm.moduleId} onChange={e=>setNewForm({...newForm,moduleId:e.target.value})}><option value="">Select…</option>{(window._rawModules||MODULES).map(m=><option key={m.id||m.code} value={m.id||m.code}>{m.name}</option>)}</select></div>
-            <div className="field"><label>Group</label><select required value={newForm.groupId} onChange={e=>setNewForm({...newForm,groupId:e.target.value})}><option value="">Select…</option>{(window._rawGroups||GROUPS_LIST).map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></div>
-            <div className="field"><label>Room</label><input required value={newForm.room} onChange={e=>setNewForm({...newForm,room:e.target.value})} placeholder="e.g. B-204"/></div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
-              <div className="field"><label>Day</label><select value={newForm.day} onChange={e=>setNewForm({...newForm,day:+e.target.value})}>{days.map((d,i)=><option key={i} value={i}>{d}</option>)}</select></div>
-              <div className="field"><label>Start</label><select value={newForm.startH} onChange={e=>setNewForm({...newForm,startH:+e.target.value})}>{hours.map(h=><option key={h} value={h}>{h}:00</option>)}</select></div>
-              <div className="field"><label>Duration</label><select value={newForm.dur} onChange={e=>setNewForm({...newForm,dur:+e.target.value})}><option value={1}>1h</option><option value={1.5}>1.5h</option><option value={2}>2h</option><option value={3}>3h</option></select></div>
-            </div>
-            <div className="drawer-foot" style={{marginTop:14}}>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={()=>setShowNew(false)}>Cancel</button>
-              <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving?'Creating…':'Create session'}</button>
-            </div>
-          </form>
+      {sessions.length>0 && view==='day' && (
+        <div className="card" style={{padding:0}}>
+          <div style={{padding:'14px 18px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:12}}>
+            <div className="segment">{days.map((d,i)=>(<button key={i} className={day===i?'active':''} onClick={()=>setDay(i)}>{d}</button>))}</div>
+          </div>
+          <div className="day-grid">
+            {HOURS.map(h => (
+              <React.Fragment key={h}>
+                <div className="hr-row">{String(h).padStart(2,'0')}:00</div>
+                <div className="ev-row">
+                  {sessions.filter(s=>s.day===day && Math.floor(s.start)===h).map((e,i)=>{
+                    const M = MODULES.find(m=>m.code===e.mod||m.name===e.mod) || {color:'#5FA83C',name:e.mod};
+                    return (
+                      <div key={i} className="tt-ev" style={{borderLeftColor:M.color, position:'static', height:'auto', marginBottom:6}} onClick={()=> canEdit ? openEdit(e) : null}>
+                        <div className="mod">{M.name||e.mod} <span style={{color:'var(--text-3)',fontFamily:'var(--mono)',fontSize:10,fontWeight:500,marginLeft:6}}>{String(Math.floor(e.start)).padStart(2,'0')}:{String(Math.round((e.start%1)*60)).padStart(2,'0')} • {e.dur}h</span></div>
+                        <div className="gr">{e.grp} — {e.room}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
-      </>}
+      )}
+
+      {sessions.length>0 && view==='month' && (
+        <MonthView sessions={sessions} days={days} />
+      )}
+
+      {/* Add / Edit Session modal */}
+      {(editing||adding) && (
+        <>
+          <div className="drawer-bg open" onClick={closeModal}></div>
+          <div className="modal open" key={editing?.id||'new'}>
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{adding ? (lang==='fr'?'Nouvelle session':'New session') : (lang==='fr'?'Modifier session':'Edit session')}</h3>
+              <button className="tb-btn" onClick={closeModal}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field">
+                  <label>Module</label>
+                  <select value={form.mod} onChange={e=>setForm(f=>({...f,mod:e.target.value}))}>
+                    {MODULES.map(m=><option key={m.code} value={m.code}>{m.code} — {m.name}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Group</label>
+                  <select value={form.grp} onChange={e=>setForm(f=>({...f,grp:e.target.value}))}>
+                    {GROUPS_LIST.map(g=><option key={g.id} value={g.name||g.id}>{g.name||g.id}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Day</label>
+                  <select value={form.day} onChange={e=>setForm(f=>({...f,day:parseInt(e.target.value)}))}>
+                    {days.map((d,i)=><option key={i} value={i}>{d}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Room</label>
+                  <input value={form.room} onChange={e=>setForm(f=>({...f,room:e.target.value}))} placeholder="B-204"/>
+                </div>
+                <div className="field">
+                  <label>Start time</label>
+                  <input type="number" min="8" max="18" step="0.5" value={form.start} onChange={e=>setForm(f=>({...f,start:e.target.value}))}/>
+                </div>
+                <div className="field">
+                  <label>Duration (h)</label>
+                  <input type="number" min="0.5" max="4" step="0.5" value={form.dur} onChange={e=>setForm(f=>({...f,dur:e.target.value}))}/>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={closeModal}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveSession}>{t('btn.save')}</button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
 
-// ───── Absences / Attendance ─────
-function Absences({ role, toast }) {
-  const [group, setGroup] = uS('L3-INFO-A');
-  const [session, setSession] = uS('CS301 \u2014 Mon 08:00');
-  const [search, setSearch] = uS('');
-  const [marks, setMarks] = uS({});
+function MonthView({ sessions, days }) {
+  const cells = [];
+  for(let i=0;i<35;i++){
+    const dayNum = i - 0 + 21;
+    cells.push(dayNum);
+  }
+  return (
+    <div className="month-grid">
+      {days.concat(['Sun']).map(d => <div key={d} className="mh">{d}</div>)}
+      {Array.from({length:35}).map((_,i) => {
+        const dayNum = 14 + i;
+        const inMonth = dayNum>=14 && dayNum<=31;
+        const weekday = i % 7;
+        const today = dayNum===22;
+        const evs = weekday<6 ? sessions.filter(s => s.day===weekday) : [];
+        return (
+          <div key={i} className={`mc ${!inMonth?'muted':''} ${today?'today':''}`}>
+            <div className="dnum">{dayNum<=31?dayNum:dayNum-31}</div>
+            {evs.slice(0,3).map((e,j)=>{
+              const M = MODULES.find(m=>m.code===e.mod||m.name===e.mod) || {color:'#5FA83C'};
+              return <div key={j} className="me" style={{borderLeftColor:M.color}}>{e.mod} — {e.grp}</div>;
+            })}
+            {evs.length>3 && <div style={{fontSize:10,color:'var(--text-3)',marginTop:2}}>+{evs.length-3} more</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-  // ── Student view: read-only attendance summary ──
-  if (role === 'etudiant') {
-    const myName = window.USER?.name || 'Student';
-    const me = STUDENTS.find(s => s.name === myName) || STUDENTS[0] || {};
+// ─── ATTENDANCE ───
+function Absences({ role, toast }) {
+  const { t, lang } = useI18n();
+  const [filter, setFilter] = uSP('all');
+  const [groupFilter, setGroupFilter] = uSP('all');
+  const [marks, setMarks] = uSP({});
+  const me = ROLES.etudiant;
+  let students = STUDENTS;
+  if (role==='etudiant') students = students.filter(s => s.group === me.group);
+
+  const filtered = students.filter(s => {
+    if (groupFilter!=='all' && s.group!==groupFilter) return false;
+    if (filter==='at-risk' && s.att>=80) return false;
+    return true;
+  });
+
+  const setStatus = (sid, st) => {
+    if (role==='etudiant') return;
+    setMarks(m => ({...m, [sid]: st}));
+    toast({ type:'success', title:'Attendance updated', desc:`${st==='p'?'Present':st==='l'?'Late':'Absent'} marked.` });
+  };
+
+  const defaultMark = (s) => s.att>=85?'p':s.att>=70?'l':'a';
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{t('nav.Attendance')}</h1>
+          <div className="sub">{lang==='fr'?'Suivi des présences':'Track attendance and absences'}</div>
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-head">
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <select value={groupFilter} onChange={e=>setGroupFilter(e.target.value)} style={{padding:'7px 10px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
+              <option value="all">All groups</option>
+              {GROUPS_LIST.map(g=><option key={g.id} value={g.name||g.id}>{g.name||g.id}</option>)}
+            </select>
+            <div className="segment">
+              <button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>All</button>
+              <button className={filter==='at-risk'?'active':''} onClick={()=>setFilter('at-risk')}>At risk</button>
+            </div>
+          </div>
+          <div className="meta">{filtered.length} students</div>
+        </div>
+        <table className="tbl">
+          <thead><tr><th>Student</th><th>Group</th><th>Attendance</th><th>Today's status</th></tr></thead>
+          <tbody>
+            {filtered.map(s => {
+              const mark = marks[s.id] || defaultMark(s);
+              return (
+                <tr key={s.id} className={s.att<70?'absent-row':''}>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <span className="av av-sm" style={{background:s.color}}>{s.init}</span>
+                      <div>
+                        <div style={{fontWeight:600}}>{s.name}</div>
+                        <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{s.id}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{s.group}</td>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <div className="pbar" style={{width:120}}><span style={{width:s.att+'%',background:s.att<70?'var(--red)':s.att<85?'var(--orange)':'var(--green)'}}></span></div>
+                      <span className="mono" style={{fontSize:12,fontWeight:600,minWidth:38}}>{s.att}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    {role==='etudiant' ? (
+                      <span className={`pill ${mark==='p'?'paid':mark==='l'?'partial':'overdue'}`}><span className="d"></span>{mark==='p'?'Present':mark==='l'?'Late':'Absent'}</span>
+                    ) : (
+                      <div className="att-group">
+                        <button className={`att-btn p ${mark==='p'?'active':''}`} onClick={()=>setStatus(s.id,'p')}>{t('att.present')}</button>
+                        <button className={`att-btn l ${mark==='l'?'active':''}`} onClick={()=>setStatus(s.id,'l')}>{t('att.late')}</button>
+                        <button className={`att-btn a ${mark==='a'?'active':''}`} onClick={()=>setStatus(s.id,'a')}>{t('att.absent')}</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+// ─── MODULES ───
+function Modules({ role, toast }) {
+  const { t, lang } = useI18n();
+  const [detail, setDetail] = uSP(null);
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{t('nav.Modules')}</h1>
+          <div className="sub">{lang==='fr'?'Catalogue des modules académiques':'Academic module catalogue'}</div>
+        </div>
+        {(role==='admin'||role==='scolarite') && <div className="page-actions"><button className="btn btn-primary btn-sm"><Icon name="plus" size={14}/>{lang==='fr'?'Nouveau module':'New module'}</button></div>}
+      </div>
+      <div className="grid-3">
+        {MODULES.map(m => (
+          <div key={m.code} className="card">
+            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14}}>
+              <div>
+                <div style={{fontSize:11,fontFamily:'var(--mono)',color:'var(--text-3)',fontWeight:600,letterSpacing:0.5}}>{m.code}</div>
+                <div style={{fontSize:16,fontWeight:700,marginTop:2,color:'var(--text)'}}>{m.name}</div>
+              </div>
+              <div style={{width:8,height:8,borderRadius:'50%',background:m.color,marginTop:8}}></div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,fontSize:12.5,color:'var(--text-2)'}}>
+              <span className="av av-xs" style={{background:m.color, width:24, height:24, fontSize:9}}>{(m.teacher||'').split(' ').map(p=>p[0]).slice(-2).join('')}</span>
+              {m.teacher}
+            </div>
+            <div style={{marginTop:12,display:'flex',gap:6}}>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setDetail(m)}>{t('btn.viewDetails')}</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {detail && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setDetail(null)}></div>
+          <div className="drawer open">
+            <div className="drawer-head">
+              <div>
+                <div style={{fontSize:11,fontFamily:'var(--mono)',color:'var(--text-3)',fontWeight:600,letterSpacing:0.5}}>{detail.code}</div>
+                <div style={{fontSize:16,fontWeight:700}}>{detail.name}</div>
+              </div>
+              <button className="tb-btn" onClick={()=>setDetail(null)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="drawer-body">
+              <div style={{display:'flex',gap:10,marginBottom:18}}>
+                <div className="stat" style={{flex:1,padding:14}}>
+                  <div className="stat-v" style={{fontSize:22}}>{detail.credits||'—'}</div>
+                  <div className="stat-l">Credits</div>
+                </div>
+                <div className="stat" style={{flex:2,padding:14}}>
+                  <div style={{fontSize:13,fontWeight:600,color:'var(--text)'}}>{detail.teacher||'—'}</div>
+                  <div className="stat-l">Instructor</div>
+                </div>
+              </div>
+              <h4 style={{fontSize:12,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:10,fontWeight:700}}>Sessions this week</h4>
+              {SESSIONS.filter(s => s.mod===detail.code || s.mod===detail.name).slice(0,6).map((s,i) => {
+                const d = (lang==='fr'?DAYS_FR:DAYS_EN)[s.day] || '—';
+                return (
+                  <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',border:'1px solid var(--border)',borderRadius:8,marginBottom:6}}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13}}>{s.grp}</div>
+                      <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{d} {String(Math.floor(s.start)).padStart(2,'0')}:{String(Math.round((s.start%1)*60)).padStart(2,'0')} • {s.dur}h</div>
+                    </div>
+                    <div style={{fontSize:12,color:'var(--text-2)',fontFamily:'var(--mono)'}}>{s.room||'—'}</div>
+                  </div>
+                );
+              })}
+              {SESSIONS.filter(s => s.mod===detail.code || s.mod===detail.name).length===0 && (
+                <div style={{fontSize:13,color:'var(--text-3)',padding:'12px 0'}}>No sessions scheduled.</div>
+              )}
+            </div>
+            <div className="drawer-foot">
+              <button className="btn btn-ghost" onClick={()=>setDetail(null)}>{t('btn.close')}</button>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+// ─── GRADES ───
+function Grades({ role, toast }) {
+  const { t, lang } = useI18n();
+  const readOnly = role==='admin' || role==='scolarite';
+
+  if (role==='etudiant') {
+    const overall = (STUDENT_GRADES.reduce((a,g)=>a+g.average,0)/STUDENT_GRADES.length).toFixed(2);
     return (
       <>
         <div className="page-head">
-          <div><h1>My Attendance</h1><div className="sub">Your attendance record across all sessions</div></div>
-        </div>
-        <div className="grid-4" style={{marginBottom:14}}>
-          <StatCard label="Attendance rate" value={`${me.att || 0}%`} icon="\u2713" color="green" trend="up" delta="Overall"/>
-          <StatCard label="Sessions attended" value="14/16" icon="\u2713" color="blue" trend="flat" delta="This semester"/>
-          <StatCard label="Late" value="1" icon="\u23f0" color="orange" trend="flat" delta="This semester"/>
-          <StatCard label="Absent" value="1" icon="\u2717" color="red" trend="flat" delta="1 justified"/>
+          <div>
+            <h1>{t('nav.Grades')}</h1>
+            <div className="sub">{ROLES.etudiant.name} — Group {ROLES.etudiant.group}</div>
+          </div>
+          <div className="page-actions">
+            <div style={{padding:'8px 14px',background:'var(--accent-50)',color:'var(--accent)',borderRadius:8,fontWeight:700,fontSize:14,fontFamily:'var(--head-font)'}}>{t('grade.overall')}: {overall}/20</div>
+          </div>
         </div>
         <div className="card">
-          <div className="card-head"><h3>Attendance history</h3></div>
           <table className="tbl">
-            <thead><tr><th>Date</th><th>Session</th><th>Module</th><th>Status</th></tr></thead>
+            <thead><tr><th>{t('grade.module')}</th><th>{t('grade.exam')}</th><th>{t('grade.homework')}</th><th>{t('grade.participation')}</th><th>{t('grade.average')}</th></tr></thead>
             <tbody>
-              {[
-                {d:'May 2, 2026',s:'08:00\u201310:00',m:'Blockchain Technology',st:'present'},
-                {d:'Apr 30, 2026',s:'10:30\u201312:30',m:'DevSecOps',st:'present'},
-                {d:'Apr 28, 2026',s:'14:00\u201316:00',m:'Intro to AI',st:'present'},
-                {d:'Apr 25, 2026',s:'08:00\u201310:00',m:'Blockchain Technology',st:'late'},
-                {d:'Apr 23, 2026',s:'10:30\u201312:30',m:'DevSecOps',st:'present'},
-                {d:'Apr 21, 2026',s:'14:00\u201316:00',m:'Intro to AI',st:'absent'},
-              ].map((r,i) => (
-                <tr key={i}>
-                  <td style={{fontWeight:600}}>{r.d}</td>
-                  <td style={{color:'var(--text-2)'}}>{r.s}</td>
-                  <td>{r.m}</td>
-                  <td><span className={`pill ${r.st==='present'?'paid':r.st==='late'?'partial':'overdue'}`}><span className="d"/>{r.st[0].toUpperCase()+r.st.slice(1)}</span></td>
+              {STUDENT_GRADES.map(g => (
+                <tr key={g.module}>
+                  <td>
+                    <div style={{fontWeight:600}}>{g.name}</div>
+                    <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{g.module}</div>
+                  </td>
+                  <td className="mono">{g.exam.toFixed(1)}</td>
+                  <td className="mono">{g.hw.toFixed(1)}</td>
+                  <td className="mono">{g.participation.toFixed(1)}</td>
+                  <td><strong style={{fontFamily:'var(--head-font)',fontSize:15,color:g.average>=14?'var(--green)':g.average>=10?'var(--orange)':'var(--red)'}}>{g.average.toFixed(2)}</strong></td>
                 </tr>
               ))}
             </tbody>
@@ -572,234 +667,201 @@ function Absences({ role, toast }) {
     );
   }
 
-  // ── Admin / Scolarite / Enseignant: full marking interface ──
-  const list = STUDENTS.filter(s => s.group===group && (!search || s.name.toLowerCase().includes(search.toLowerCase())));
-  const present = list.filter(s => marks[s.id]==='p').length;
-  const absent = list.filter(s => marks[s.id]==='a').length;
-  const late = list.filter(s => marks[s.id]==='l').length;
-  const pending = list.length - present - absent - late;
+  // Teacher / Admin / Scolarité view
+  const [edits, setEdits] = uSP({});
+  const [groupSel, setGroupSel] = uSP(() => GROUPS_LIST[0]?.id || '');
+  const selGroup = GROUPS_LIST.find(g => g.id === groupSel);
+  const classStudents = STUDENTS.filter(s => selGroup ? (s.group===selGroup.name || s.group===selGroup.id) : false);
+  const setVal = (sid, key, v) => setEdits(e => ({ ...e, [sid+'_'+key]: v }));
+  const get = (s, key, def) => edits[s.id+'_'+key] !== undefined ? edits[s.id+'_'+key] : def;
 
   return (
     <>
       <div className="page-head">
-        <div><h1>Attendance</h1><div className="sub">Mark attendance for today's sessions — fast, keyboard-friendly</div></div>
+        <div>
+          <h1>{t('nav.Grades')}</h1>
+          <div className="sub">CS301 — Algorithms & Data Structures</div>
+        </div>
         <div className="page-actions">
-          <button className="btn btn-ghost btn-sm" onClick={()=>{ const m={}; list.forEach(s=>m[s.id]='p'); setMarks({...marks,...m}); toast({title:'All marked present',type:'success'}); }}>✓ Mark all present</button>
-          <button className="btn btn-primary btn-sm" onClick={async()=>{
-            const records = Object.entries(marks).map(([studentId,v])=>({studentId, status: v==='p'?'Present':v==='a'?'Absent':'Late'}));
-            if(!records.length){toast({title:'No marks to save',type:'warn'});return;}
-            try { await window.api.request('/absences/bulk',{method:'POST',body:{sessionId: window._lastSessionId || 'demo', records}}); toast({title:'Attendance saved',desc:`${present} present, ${absent} absent, ${late} late`,type:'success'}); }
-            catch(err){ toast({title:'Saved locally',desc:`${present}P ${absent}A ${late}L (API: ${err.message})`,type:'info'}); }
-          }}>Save</button>
-        </div>
-      </div>
-
-      <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard label="Attendance rate"       value={`${Math.round(present/Math.max(list.length,1)*100)||0}%`} icon="✓" color="green" delta={`${present}/${list.length}`} trend="flat"/>
-        <StatCard label="At-risk students"      value="4"   delta="+1" trend="down" icon="⚠" color="red"/>
-        <StatCard label="Pending justifications" value="23" icon="⏰" color="orange" delta="+8" trend="flat"/>
-        <StatCard label="This week sessions"    value="16"  icon="▦" color="blue" delta="3 today" trend="flat"/>
-      </div>
-
-      <div className="card" style={{padding:0}}>
-        <div style={{padding:'14px 18px',borderBottom:'1px solid var(--border)',display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
-          <select value={session} onChange={e=>setSession(e.target.value)} style={{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,fontWeight:600,background:'#fff'}}>
-            <option>CS301 — Mon 08:00</option><option>MA205 — Mon 10:00</option><option>DB310 — Mon 14:00</option>
+          <select value={groupSel} onChange={e=>setGroupSel(e.target.value)} style={{padding:'8px 12px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
+            {GROUPS_LIST.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
-          <select value={group} onChange={e=>setGroup(e.target.value)} style={{padding:'8px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'#fff'}}>
-            {GROUPS_LIST.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
-          <div style={{flex:1,minWidth:200,position:'relative'}}>
-            <input placeholder="Search student…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'8px 12px 8px 34px',border:'1px solid var(--border)',borderRadius:8,fontSize:13}}/>
-            <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text-3)'}}>⌕</span>
-          </div>
-          <div style={{fontSize:12,color:'var(--text-2)',display:'flex',gap:14}}>
-            <span>✓ <strong style={{color:'var(--green)'}}>{present}</strong></span>
-            <span>⏰ <strong style={{color:'var(--orange)'}}>{late}</strong></span>
-            <span>✗ <strong style={{color:'var(--red)'}}>{absent}</strong></span>
-            <span>• <strong>{pending}</strong> pending</span>
-          </div>
+          {!readOnly && <button className="btn btn-primary btn-sm" onClick={()=>{ toast({type:'success',title:'Grades saved', desc:`${Object.keys(edits).length} changes saved.`}); setEdits({}); }}>{t('btn.save')}</button>}
         </div>
-        <table className="tbl">
-          <thead><tr><th style={{width:50}}>#</th><th>Student</th><th>ID</th><th>Avg</th><th>Att. rate</th><th style={{textAlign:'right'}}>Mark</th></tr></thead>
-          <tbody>
-            {list.map((s,i) => {
-              const m = marks[s.id];
-              return (
-                <tr key={s.id} className={m==='a'?'absent-row':''}>
-                  <td style={{color:'var(--text-3)',fontFamily:'ui-monospace'}}>{String(i+1).padStart(2,'0')}</td>
-                  <td>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div className="av av-sm" style={{background:s.color}}>{s.init}</div>
-                      <div>
-                        <div style={{fontWeight:600}}>{s.name}</div>
-                        {s.status==='at-risk' && <span className="badge red" style={{fontSize:10,marginTop:2}}>At risk</span>}
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{fontFamily:'ui-monospace',color:'var(--text-3)'}}>{s.id}</td>
-                  <td style={{fontWeight:700}}>{s.avg}</td>
-                  <td style={{width:140}}>
-                    <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <div className="pbar" style={{flex:1}}><span style={{width:`${s.att}%`,background:s.att>85?'var(--green)':s.att>70?'var(--orange)':'var(--red)'}}/></div>
-                      <span style={{fontSize:11,fontWeight:600,width:30}}>{s.att}%</span>
-                    </div>
-                  </td>
-                  <td style={{textAlign:'right'}}>
-                    <div className="att-group">
-                      <button className={`att-btn p ${m==='p'?'active':''}`} onClick={()=>setMarks({...marks,[s.id]:'p'})}>Present</button>
-                      <button className={`att-btn l ${m==='l'?'active':''}`} onClick={()=>setMarks({...marks,[s.id]:'l'})}>Late</button>
-                      <button className={`att-btn a ${m==='a'?'active':''}`} onClick={()=>setMarks({...marks,[s.id]:'a'})}>Absent</button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
-    </>
-  );
-}
-
-// ───── Payments ─────
-function Payments({ role, toast }) {
-  const [status, setStatus] = uS('all');
-  const [search, setSearch] = uS('');
-  const list = PAYMENTS.filter(p => (status==='all'||p.status===status) && (!search || p.student.toLowerCase().includes(search.toLowerCase())));
-  const byStatus = {
-    paid:PAYMENTS.filter(p=>p.status==='paid'),
-    partial:PAYMENTS.filter(p=>p.status==='partial'),
-    overdue:PAYMENTS.filter(p=>p.status==='overdue'),
-    pending:PAYMENTS.filter(p=>p.status==='pending'),
-  };
-  const sum = arr => arr.reduce((a,p)=>a+p.amount,0);
-
-  if(role==='etudiant'){
-    return (
-      <>
-        <div className="page-head"><div><h1>Payments</h1><div className="sub">Your tuition & fees timeline</div></div></div>
-        <div className="grid-3" style={{marginBottom:14}}>
-          <StatCard label="Paid this year"  value="37,500 MAD" icon="✓" color="green" trend="up" delta="3/3"/>
-          <StatCard label="Remaining balance" value="0 MAD"    icon="❐" color="blue" trend="flat" delta="Up to date"/>
-          <StatCard label="Next due"         value="Jan 15"    icon="⏰" color="orange" trend="flat" delta="Q3 tuition"/>
+      {readOnly && (
+        <div className="readonly-banner">
+          <span className="lock"><Icon name="lock" size={14}/></span>
+          {t('grade.viewOnly')}
         </div>
+      )}
+      {classStudents.length===0 && (
+        <div className="card"><div className="empty">No students found for this group.</div></div>
+      )}
+      {classStudents.length>0 && (
         <div className="card">
-          <div className="card-head"><h3>Payment history</h3><button className="btn btn-primary btn-sm" onClick={async()=>{
-            const amount=parseFloat(prompt('Amount (MAD):','12500')); if(!amount) return;
-            try{await window.api.request('/payments',{method:'POST',body:{studentId:window._userId,planType:'Mensualite',amount,status:'Paid',dueDate:new Date().toISOString().split('T')[0]}});toast({title:'Payment recorded',type:'success'});window.location.reload();}
-            catch(err){toast({title:'Error',desc:err.message,type:'error'});}
-          }}>+ Make payment</button></div>
-          {[
-            {d:'Oct 08, 2024',t:'Q2 Tuition',a:12500,s:'paid',m:'Bank transfer'},
-            {d:'Jul 12, 2024',t:'Q1 Tuition',a:12500,s:'paid',m:'Card'},
-            {d:'Apr 05, 2024',t:'Registration',a:12500,s:'paid',m:'Bank transfer'},
-          ].map((p,i,a) => (
-            <div key={i} style={{display:'flex',alignItems:'center',gap:14,padding:'14px 0',borderBottom:i<a.length-1?'1px solid var(--border)':'0'}}>
-              <div style={{width:40,height:40,borderRadius:10,background:'var(--green-50)',color:'var(--green-600)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>✓</div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13.5,fontWeight:600}}>{p.t}</div>
-                <div style={{fontSize:12,color:'var(--text-3)'}}>{p.d} · {p.m}</div>
-              </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:14,fontWeight:700}}>{p.a.toLocaleString()} MAD</div>
-                <span className="pill paid"><span className="d"/>Paid</span>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={()=>{const w=window.open('','_blank','width=400,height=500');w.document.write(`<html><head><title>Receipt</title><style>body{font-family:sans-serif;padding:30px}h2{color:#5FA83C}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}</style></head><body><h2>CampusOps Receipt</h2><div class='row'><b>Type:</b><span>${p.t}</span></div><div class='row'><b>Date:</b><span>${p.d}</span></div><div class='row'><b>Amount:</b><span>${p.a.toLocaleString()} MAD</span></div><div class='row'><b>Method:</b><span>${p.m}</span></div><div class='row'><b>Status:</b><span>Paid</span></div><br><button onclick='window.print()'>Print</button></body></html>`);w.document.close();}}>Receipt</button>
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className="page-head">
-        <div><h1>Payments</h1><div className="sub">Invoices, collections & overdue follow-up</div></div>
-        <div className="page-actions">
-          <button className="btn btn-ghost btn-sm" onClick={()=>{const rows=['Invoice,Student,Type,Amount,Date,Status',...PAYMENTS.map(p=>`${p.id},${p.student},${p.type},${p.amount},${p.date},${p.status}`)];const b=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='payments.csv';a.click();toast({title:'Payments exported',type:'success'})}}>⤓ Export CSV</button>
-          <button className="btn btn-primary btn-sm" onClick={async()=>{
-            const studentId = prompt('Student ID (UUID):'); if(!studentId) return;
-            const amount = parseFloat(prompt('Amount (MAD):','12500')); if(!amount) return;
-            try { await window.api.request('/payments',{method:'POST',body:{studentId, planType:'Mensualite', amount, status:'Unpaid', dueDate: new Date().toISOString().split('T')[0]}}); toast({title:'Invoice created',type:'success'}); window.location.reload(); }
-            catch(err){ toast({title:'Error',desc:err.message,type:'error'}); }
-          }}>+ Create invoice</button>
-        </div>
-      </div>
-
-      <div className="grid-4" style={{marginBottom:14}}>
-        <div className="stat" style={{borderLeft:'3px solid var(--green)'}}>
-          <div className="stat-h"><div className="stat-ic" style={{background:'var(--green-50)',color:'var(--green-600)'}}>✓</div><span className="pill paid"><span className="d"/>Paid</span></div>
-          <div className="stat-v">{sum(byStatus.paid).toLocaleString()} <span style={{fontSize:12,color:'var(--text-3)',fontWeight:500}}>MAD</span></div>
-          <div className="stat-l">{byStatus.paid.length} invoices collected</div>
-        </div>
-        <div className="stat" style={{borderLeft:'3px solid var(--orange)'}}>
-          <div className="stat-h"><div className="stat-ic" style={{background:'var(--orange-50)',color:'var(--orange)'}}>◐</div><span className="pill partial"><span className="d"/>Partial</span></div>
-          <div className="stat-v">{sum(byStatus.partial).toLocaleString()} <span style={{fontSize:12,color:'var(--text-3)',fontWeight:500}}>MAD</span></div>
-          <div className="stat-l">{byStatus.partial.length} partially paid</div>
-        </div>
-        <div className="stat" style={{borderLeft:'3px solid var(--red)'}}>
-          <div className="stat-h"><div className="stat-ic" style={{background:'var(--red-50)',color:'var(--red)'}}>⚠</div><span className="pill overdue"><span className="d"/>Overdue</span></div>
-          <div className="stat-v">{sum(byStatus.overdue).toLocaleString()} <span style={{fontSize:12,color:'var(--text-3)',fontWeight:500}}>MAD</span></div>
-          <div className="stat-l">{byStatus.overdue.length} past due date</div>
-        </div>
-        <div className="stat" style={{borderLeft:'3px solid var(--blue)'}}>
-          <div className="stat-h"><div className="stat-ic" style={{background:'var(--blue-50)',color:'var(--blue)'}}>⏰</div><span className="pill pending"><span className="d"/>Pending</span></div>
-          <div className="stat-v">{sum(byStatus.pending).toLocaleString()} <span style={{fontSize:12,color:'var(--text-3)',fontWeight:500}}>MAD</span></div>
-          <div className="stat-l">{byStatus.pending.length} awaiting payment</div>
-        </div>
-      </div>
-
-      <div className="card" style={{padding:0}}>
-        <div style={{padding:'14px 18px',borderBottom:'1px solid var(--border)',display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
-          <div className="segment">
-            {['all','paid','partial','pending','overdue'].map(s => (
-              <button key={s} className={status===s?'active':''} onClick={()=>setStatus(s)}>{s[0].toUpperCase()+s.slice(1)}</button>
-            ))}
-          </div>
-          <div style={{flex:1,minWidth:200,position:'relative'}}>
-            <input placeholder="Search invoice or student…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'8px 12px 8px 34px',border:'1px solid var(--border)',borderRadius:8,fontSize:13}}/>
-            <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text-3)'}}>⌕</span>
-          </div>
-          <div style={{fontSize:12,color:'var(--text-3)'}}>{list.length} invoices</div>
-        </div>
-        <table className="tbl">
-          <thead><tr><th>Invoice</th><th>Student</th><th>Type</th><th style={{textAlign:'right'}}>Amount</th><th>Date</th><th>Status</th><th style={{textAlign:'right'}}>Actions</th></tr></thead>
-          <tbody>
-            {list.map(p => {
-              const st = STUDENTS.find(s=>s.name===p.student);
-              return (
-                <tr key={p.id}>
-                  <td style={{fontFamily:'ui-monospace',fontWeight:600}}>{p.id}</td>
-                  <td>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div className="av av-xs" style={{background:st?.color||'#64748B'}}>{(p.student || '').split(' ').map(x=>x[0]).join('')}</div>
-                      <div>
-                        <div style={{fontWeight:600}}>{p.student}</div>
-                        <div style={{fontSize:11,color:'var(--text-3)'}}>{p.group}</div>
+          <table className="tbl">
+            <thead><tr><th>Student</th><th>Midterm</th><th>Final</th><th>Homework</th><th>Participation</th><th>Average</th></tr></thead>
+            <tbody>
+              {classStudents.map((s,i) => {
+                const sample = { mid:12+i*0.4, fin:13+i*0.3, hw:14+i*0.2, part:15+(i%4) };
+                const mid = parseFloat(get(s,'mid',sample.mid))||0;
+                const fin = parseFloat(get(s,'fin',sample.fin))||0;
+                const hw = parseFloat(get(s,'hw',sample.hw))||0;
+                const part = parseFloat(get(s,'part',sample.part))||0;
+                const a = ((mid+fin+hw+part)/4).toFixed(2);
+                return (
+                  <tr key={s.id}>
+                    <td>
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <span className="av av-sm" style={{background:s.color}}>{s.init}</span>
+                        <div style={{fontWeight:600}}>{s.name}</div>
                       </div>
-                    </div>
-                  </td>
-                  <td>{p.type}</td>
-                  <td style={{textAlign:'right',fontWeight:700,fontFamily:'ui-monospace'}}>{p.amount.toLocaleString()}</td>
-                  <td style={{color:'var(--text-2)'}}>{p.date}</td>
-                  <td><span className={`pill ${p.status}`}><span className="d"/>{p.status}</span></td>
-                  <td style={{textAlign:'right'}}>
-                    <button className="btn btn-ghost btn-sm" style={{padding:'4px 10px',marginRight:4}} onClick={()=>{const w=window.open('','_blank','width=400,height=500');w.document.write(`<html><head><title>Receipt</title><style>body{font-family:sans-serif;padding:30px}h2{color:#5FA83C}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}</style></head><body><h2>CampusOps Receipt</h2><div class='row'><b>Invoice:</b><span>${p.id}</span></div><div class='row'><b>Student:</b><span>${p.student}</span></div><div class='row'><b>Amount:</b><span>${p.amount.toLocaleString()} MAD</span></div><div class='row'><b>Status:</b><span>${p.status}</span></div><br><button onclick='window.print()'>Print</button></body></html>`);w.document.close();}}>Receipt</button>
-                    {(p.status==='overdue'||p.status==='pending') && <button className="btn btn-primary btn-sm" style={{padding:'4px 10px'}} onClick={async()=>{
-                      try{const users=USERS_LIST.filter(u=>u.name===p.student);const uid=users[0]?.id||window._userId;await window.api.request('/notifications',{method:'POST',body:{userId:uid,title:'Payment Reminder',content:`Your invoice ${p.id} for ${p.amount.toLocaleString()} MAD is ${p.status}. Please pay as soon as possible.`}});toast({title:'Reminder sent',desc:`Notification sent to ${p.student}`,type:'success'});}
-                      catch(err){toast({title:'Reminder sent',desc:`Email sent to ${p.student}`,type:'success'});}
-                    }}>Notify</button>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    </td>
+                    {['mid','fin','hw','part'].map(k => (
+                      <td key={k}>
+                        {readOnly ? <span className="mono">{parseFloat(get(s,k,sample[k])).toFixed(1)}</span>
+                                  : <input type="number" min="0" max="20" step="0.25" value={get(s,k,sample[k])} onChange={e=>setVal(s.id,k,e.target.value)} style={{width:70,padding:'5px 8px',borderRadius:6,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontFamily:'var(--mono)',fontSize:13}}/>}
+                      </td>
+                    ))}
+                    <td><strong style={{fontFamily:'var(--head-font)',fontSize:14,color:a>=14?'var(--green)':a>=10?'var(--orange)':'var(--red)'}}>{a}</strong></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }
 
-Object.assign(window, { Dashboard, Planning, Absences, Payments });
+// ─── BRANCHES ───
+function Branches({ toast }) {
+  const { t, lang } = useI18n();
+  const [detail, setDetail] = uSP(null);
+  const [editB, setEditB] = uSP(null);
+  const [editForm, setEditForm] = uSP({});
+
+  const openEditB = (b) => {
+    setEditForm({ code: b.code, name: b.name, head: b.head||'', color: b.color||'#5FA83C' });
+    setEditB(b);
+    setDetail(null);
+  };
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>{t('nav.Branches')}</h1>
+          <div className="sub">{lang==='fr'?'Filières et départements':'Academic branches and departments'}</div>
+        </div>
+        <div className="page-actions"><button className="btn btn-primary btn-sm"><Icon name="plus" size={14}/>{lang==='fr'?'Nouvelle filière':'New branch'}</button></div>
+      </div>
+      <div className="grid-2">
+        {BRANCHES.map(b => (
+          <div key={b.code} className="card">
+            <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
+              <div className="av" style={{background:b.color, width:54, height:54, fontSize:18, borderRadius:12}}>{b.code.slice(0,2)}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:17,fontWeight:700}}>{b.name}</div>
+                <div style={{fontSize:12.5, color:'var(--text-2)', marginTop:2}}>Head: {b.head}</div>
+                <div style={{display:'flex',gap:18,marginTop:14, fontSize:12, color:'var(--text-2)'}}>
+                  <div><div style={{fontSize:18,fontWeight:800,color:'var(--text)',fontFamily:'var(--head-font)'}}>{b.students}</div>Students</div>
+                  <div><div style={{fontSize:18,fontWeight:800,color:'var(--text)',fontFamily:'var(--head-font)'}}>{b.groups}</div>Groups</div>
+                  {b.faculty && <div><div style={{fontSize:18,fontWeight:800,color:'var(--text)',fontFamily:'var(--head-font)'}}>{b.faculty}</div>Faculty</div>}
+                </div>
+              </div>
+            </div>
+            <div style={{marginTop:14, display:'flex', gap:8}}>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setDetail(b)}><Icon name="eye" size={14}/>{t('btn.viewDetails')}</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>openEditB(b)}><Icon name="edit" size={14}/>{t('btn.edit')}</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {detail && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setDetail(null)}></div>
+          <div className="drawer open">
+            <div className="drawer-head">
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <div className="av" style={{background:detail.color,width:40,height:40,fontSize:14,borderRadius:10}}>{detail.code.slice(0,2)}</div>
+                <div>
+                  <div style={{fontSize:16,fontWeight:700}}>{detail.name}</div>
+                  <div style={{fontSize:12,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{detail.code} • Founded {detail.founded}</div>
+                </div>
+              </div>
+              <button className="tb-btn" onClick={()=>setDetail(null)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="drawer-body">
+              <p style={{fontSize:14,lineHeight:1.6,color:'var(--text-2)'}}>{detail.description}</p>
+              <div className="grid-3" style={{marginTop:18}}>
+                <div className="stat" style={{padding:14}}><div className="stat-v" style={{fontSize:22}}>{detail.students}</div><div className="stat-l">Students</div></div>
+                <div className="stat" style={{padding:14}}><div className="stat-v" style={{fontSize:22}}>{detail.groups}</div><div className="stat-l">Groups</div></div>
+                {detail.faculty && <div className="stat" style={{padding:14}}><div className="stat-v" style={{fontSize:22}}>{detail.faculty}</div><div className="stat-l">Faculty</div></div>}
+              </div>
+              <h4 style={{marginTop:24,marginBottom:10,fontSize:13,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',fontWeight:700}}>Department head</h4>
+              <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',border:'1px solid var(--border)',borderRadius:10}}>
+                <div className="av av-md" style={{background:detail.color}}>{(detail.head||'?').split(' ').map(p=>p[0]).slice(-2).join('')}</div>
+                <div>
+                  <div style={{fontWeight:600}}>{detail.head||'—'}</div>
+                  <div style={{fontSize:12,color:'var(--text-3)'}}>Department head</div>
+                </div>
+              </div>
+              <h4 style={{marginTop:24,marginBottom:10,fontSize:13,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',fontWeight:700}}>Groups in this branch</h4>
+              <div>
+                {GROUPS_LIST.filter(g=>g.branch===detail.name).map(g => (
+                  <div key={g.id} style={{display:'flex',justifyContent:'space-between',padding:'10px 14px',border:'1px solid var(--border)',borderRadius:8,marginBottom:6}}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13}}>{g.name}</div>
+                      <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{g.id} • {g.year}</div>
+                    </div>
+                    <div style={{fontSize:13,color:'var(--text-2)',alignSelf:'center'}}>{g.students} students</div>
+                  </div>
+                ))}
+                {GROUPS_LIST.filter(g=>g.branch===detail.name).length===0 && <div className="empty">No groups in this branch yet.</div>}
+              </div>
+            </div>
+            <div className="drawer-foot">
+              <button className="btn btn-ghost" onClick={()=>setDetail(null)}>{t('btn.close')}</button>
+              <button className="btn btn-primary" onClick={()=>openEditB(detail)}><Icon name="edit" size={14}/>{t('btn.edit')}</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {editB && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setEditB(null)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{lang==='fr'?'Modifier filière':'Edit branch'} — {editB.name}</h3>
+              <button className="tb-btn" onClick={()=>setEditB(null)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field"><label>Code</label><input value={editForm.code||''} onChange={e=>setEditForm(f=>({...f,code:e.target.value}))}/></div>
+                <div className="field"><label>Name</label><input value={editForm.name||''} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))}/></div>
+                <div className="field"><label>Department head</label><input value={editForm.head||''} onChange={e=>setEditForm(f=>({...f,head:e.target.value}))}/></div>
+                <div className="field"><label>Color</label><input type="color" value={editForm.color||'#5FA83C'} onChange={e=>setEditForm(f=>({...f,color:e.target.value}))}/></div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>setEditB(null)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={()=>{
+                const idx = BRANCHES.findIndex(b => b.code===editB.code);
+                if(idx>=0) Object.assign(BRANCHES[idx], editForm);
+                toast({type:'success',title:'Branch updated',desc:editForm.name+' saved.'});
+                setEditB(null);
+              }}>{t('btn.save')}</button>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+Object.assign(window, { Dashboard, Planning, Absences, Modules, Grades, Branches });
