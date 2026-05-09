@@ -185,7 +185,7 @@ const STUDENT_GRADE_HISTORY = {
 // i18n strings
 const I18N = {
   en: {
-    'app.brand':'CampusOps','app.tagline':'University Operating System',
+    'app.brand':'CampusOps','app.tagline':'University OS',
     'nav.Dashboard':'Dashboard','nav.Planning':'Planning','nav.Attendance':'Attendance','nav.Modules':'Modules',
     'nav.Grades':'Grades','nav.Progress':'Progress','nav.Payments':'Payments','nav.Users':'Users','nav.Groups':'Groups',
     'nav.Branches':'Branches','nav.Notifications':'Notifications','nav.Settings':'Settings','nav.Academic':'Academic','nav.Personal':'Personal','nav.Administration':'Administration',
@@ -202,7 +202,7 @@ const I18N = {
     'login.signIn':'Sign in','login.email':'Email','login.password':'Password','login.role':'Role','login.welcome':'Welcome back',
   },
   fr: {
-    'app.brand':'CampusOps','app.tagline':'Système d\'Exploitation Universitaire',
+    'app.brand':'CampusOps','app.tagline':'OS Universitaire',
     'nav.Dashboard':'Tableau de bord','nav.Planning':'Planning','nav.Attendance':'Présences','nav.Modules':'Modules',
     'nav.Grades':'Notes','nav.Progress':'Progression','nav.Payments':'Paiements','nav.Users':'Utilisateurs','nav.Groups':'Groupes',
     'nav.Branches':'Filières','nav.Notifications':'Notifications','nav.Settings':'Paramètres','nav.Academic':'Académique','nav.Personal':'Personnel','nav.Administration':'Administration',
