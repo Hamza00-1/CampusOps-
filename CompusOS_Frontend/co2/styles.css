@@ -355,3 +355,7 @@ input,select,textarea{font-family:inherit;color:inherit}
 
 /* spin */
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Logo Theme Switching */
+[data-theme="light"] .logo-dark { display: none !important; }
+[data-theme="dark"] .logo-light { display: none !important; }
