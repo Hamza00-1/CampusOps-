@@ -10,7 +10,7 @@ function Sidebar({ role, active, onNav, collapsed, onToggle }) {
   return (
     <aside className="sb">
       <div className="sb-head">
-        <img src="uploads/pasted-1778117860793-0.png" alt="UEMF Logo" style={{height: 32, width: 'auto'}} />
+        <img src="uploads/UEMF.png" alt="UEMF Logo" style={{height: 32, width: 'auto'}} />
         {!collapsed && (
           <div className="sb-brand">
             CampusOps
