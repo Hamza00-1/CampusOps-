@@ -53,10 +53,10 @@ function Login({ onAuth }) {
   return (
     <div className="login">
       <div className="login-hero">
-        <div className="logo">
-          <img src="uploads/Logo_UEMF_2016.jpg" alt="UEMF Logo" className="logo-light" style={{height: 48, width: 'auto'}} />
-          <img src="uploads/UEMF.png" alt="UEMF Logo" className="logo-dark" style={{height: 48, width: 'auto'}} />
-          <div className="logo-txt">CampusOps</div>
+        <div className="logo" style={{alignItems:'center', gap:12}}>
+          <img src="uploads/Logo_UEMF_2016.jpg" alt="UEMF Logo" className="logo-light" style={{height: 48, objectFit: 'contain'}} />
+          <img src="uploads/UEMF.png" alt="UEMF Logo" className="logo-dark" style={{height: 48, objectFit: 'contain'}} />
+          <div className="logo-txt">UEMF OPS</div>
         </div>
         <div className="hero-body">
           <h1>{lang==='fr' ? "L'opérateur de votre campus." : 'Run your campus on one platform.'}</h1>

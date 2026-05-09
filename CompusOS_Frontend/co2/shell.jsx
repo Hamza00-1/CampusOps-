@@ -10,11 +10,11 @@ function Sidebar({ role, active, onNav, collapsed, onToggle }) {
   return (
     <aside className="sb">
       <div className="sb-head">
-        <img src="uploads/Logo_UEMF_2016.jpg" alt="UEMF Logo" className="logo-light" style={{height: 32, width: 'auto'}} />
-        <img src="uploads/UEMF.png" alt="UEMF Logo" className="logo-dark" style={{height: 32, width: 'auto'}} />
+        <img src="uploads/Logo_UEMF_2016.jpg" alt="UEMF Logo" className="logo-light" style={{height: 36, objectFit: 'contain'}} />
+        <img src="uploads/UEMF.png" alt="UEMF Logo" className="logo-dark" style={{height: 36, objectFit: 'contain'}} />
         {!collapsed && (
-          <div className="sb-brand">
-            CampusOps
+          <div className="sb-brand" style={{display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft: 4}}>
+            UEMF OPS
             <small>{t('app.tagline','University OS')}</small>
           </div>
         )}
