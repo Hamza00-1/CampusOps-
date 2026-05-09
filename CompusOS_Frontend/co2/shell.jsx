@@ -10,15 +10,17 @@ function Sidebar({ role, active, onNav, collapsed, onToggle }) {
   return (
     <aside className="sb">
       <div className="sb-head">
-        <img src="uploads/Logo_UEMF_2016.jpg" alt="UEMF Logo" className="logo-light" style={{ height: 36, objectFit: 'contain' }} />
-        <img src="uploads/UEMF.png" alt="UEMF Logo" className="logo-dark" style={{ height: 36, objectFit: 'contain' }} />
         {!collapsed && (
-          <div className="sb-brand" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingLeft: 4 }}>
-            CampusOps
-            <small>{t('app.tagline', 'University OS')}</small>
-          </div>
+          <>
+            <img src="uploads/Logo_UEMF_2016.jpg" alt="UEMF Logo" className="logo-light" style={{ height: 36, objectFit: 'contain' }} />
+            <img src="uploads/UEMF.png" alt="UEMF Logo" className="logo-dark" style={{ height: 36, objectFit: 'contain' }} />
+            <div className="sb-brand" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingLeft: 4 }}>
+              CampusOps
+              <small>{t('app.tagline', 'University OS')}</small>
+            </div>
+          </>
         )}
-        <button className="sb-toggle" onClick={onToggle} title={collapsed ? 'Expand' : 'Collapse'}>
+        <button className="sb-toggle" onClick={onToggle} title={collapsed ? 'Expand' : 'Collapse'} style={collapsed ? { margin: 0, marginInline: 'auto' } : {}}>
           <Icon name="chevron" size={14} />
         </button>
       </div>
