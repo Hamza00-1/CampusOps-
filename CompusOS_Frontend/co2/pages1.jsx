@@ -251,11 +251,24 @@ function Planning({ role, toast }) {
   const [form, setForm] = uSP({ mod:'', grp:'', day:0, room:'', start:9, dur:1.5 });
   uEP(()=> localStorage.setItem('co2_planning_view', view), [view]);
 
-  const me = ROLES.etudiant;
   const allSessions = localSessions || SESSIONS;
   let sessions = allSessions;
-  if (role==='etudiant') sessions = sessions.filter(s => s.grp === me.group);
-  if (role==='enseignant') sessions = sessions.filter(s => s.teacher === ROLES.enseignant.name || s.mod === 'CS301');
+
+  // Fixed filters: etudiant uses window._userGroups; enseignant uses window._userId
+  if (role === 'etudiant') {
+    const userGroups = (window._userGroups && window._userGroups.length > 0)
+      ? window._userGroups
+      : [ROLES.etudiant.group];
+    sessions = sessions.filter(s => userGroups.includes(s.grp));
+  }
+  if (role === 'enseignant') {
+    const uid = window._userId;
+    sessions = sessions.filter(s =>
+      (uid && s.teacherId === uid) ||
+      s.teacher === ROLES.enseignant.name ||
+      s.mod === 'CS301'
+    );
+  }
 
   const canEdit = role==='admin' || role==='scolarite';
   const days = lang==='fr' ? DAYS_FR : DAYS_EN;
@@ -283,6 +296,12 @@ function Planning({ role, toast }) {
     setAdding(false);
   };
 
+  const deleteSession = () => {
+    setLocalSessions(allSessions.filter(s => s !== editing));
+    toast({ type:'success', title:'Session deleted', desc:'The session has been removed.' });
+    setEditing(null);
+  };
+
   const closeModal = () => { setEditing(null); setAdding(false); };
 
   return (
@@ -291,7 +310,7 @@ function Planning({ role, toast }) {
         <div>
           <h1>{t('nav.Planning')}</h1>
           <div className="sub">
-            {role==='etudiant' && <>Schedule for group <strong>{me.group}</strong></>}
+            {role==='etudiant' && <>Schedule for group <strong>{(window._userGroups&&window._userGroups[0])||ROLES.etudiant.group}</strong></>}
             {role==='enseignant' && <>Sessions taught by <strong>{ROLES.enseignant.name}</strong></>}
             {(role==='admin'||role==='scolarite') && <>Full schedule — week of Oct 21, 2024</>}
           </div>
@@ -413,6 +432,11 @@ function Planning({ role, toast }) {
               </div>
             </div>
             <div className="modal-foot">
+              {!adding && (
+                <button className="btn btn-danger-soft" onClick={deleteSession} style={{marginRight:'auto'}}>
+                  <Icon name="trash" size={14}/> Delete
+                </button>
+              )}
               <button className="btn btn-ghost" onClick={closeModal}>{t('btn.cancel')}</button>
               <button className="btn btn-primary" onClick={saveSession}>{t('btn.save')}</button>
             </div>
@@ -459,13 +483,25 @@ function Absences({ role, toast }) {
   const [filter, setFilter] = uSP('all');
   const [groupFilter, setGroupFilter] = uSP('all');
   const [marks, setMarks] = uSP({});
-  const me = ROLES.etudiant;
+
+  // Fixed student filter: use window._userGroups for etudiant
   let students = STUDENTS;
-  if (role==='etudiant') students = students.filter(s => s.group === me.group);
+  if (role === 'etudiant') {
+    const userGroups = (window._userGroups && window._userGroups.length > 0)
+      ? window._userGroups
+      : [ROLES.etudiant.group];
+    // For student role show only their own row(s)
+    const userName = ROLES.etudiant.name;
+    students = students.filter(s => userGroups.includes(s.group) && s.name === userName);
+    // Fallback: if no exact name match, show all in their groups
+    if (students.length === 0) {
+      students = STUDENTS.filter(s => userGroups.includes(s.group));
+    }
+  }
 
   const filtered = students.filter(s => {
-    if (groupFilter!=='all' && s.group!==groupFilter) return false;
-    if (filter==='at-risk' && s.att>=80) return false;
+    if (role !== 'etudiant' && groupFilter !== 'all' && s.group !== groupFilter) return false;
+    if (filter === 'at-risk' && s.att >= 80) return false;
     return true;
   });
 
@@ -488,10 +524,12 @@ function Absences({ role, toast }) {
       <div className="card">
         <div className="card-head">
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <select value={groupFilter} onChange={e=>setGroupFilter(e.target.value)} style={{padding:'7px 10px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
-              <option value="all">All groups</option>
-              {GROUPS_LIST.map(g=><option key={g.id} value={g.name||g.id}>{g.name||g.id}</option>)}
-            </select>
+            {role !== 'etudiant' && (
+              <select value={groupFilter} onChange={e=>setGroupFilter(e.target.value)} style={{padding:'7px 10px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
+                <option value="all">All groups</option>
+                {GROUPS_LIST.map(g=><option key={g.id} value={g.name||g.id}>{g.name||g.id}</option>)}
+              </select>
+            )}
             <div className="segment">
               <button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>All</button>
               <button className={filter==='at-risk'?'active':''} onClick={()=>setFilter('at-risk')}>At risk</button>
@@ -547,6 +585,30 @@ function Absences({ role, toast }) {
 function Modules({ role, toast }) {
   const { t, lang } = useI18n();
   const [detail, setDetail] = uSP(null);
+  const [localMods, setLocalMods] = uSP(() => [...MODULES]);
+  const [addingM, setAddingM] = uSP(false);
+  const [modForm, setModForm] = uSP({ code:'', name:'', credits:4, teacher:'' });
+
+  const openAddMod = () => {
+    setModForm({ code:'', name:'', credits:4, teacher:'' });
+    setAddingM(true);
+  };
+
+  const saveNewMod = () => {
+    if (!modForm.code.trim() || !modForm.name.trim()) {
+      toast({ type:'error', title:'Code and name are required' });
+      return;
+    }
+    const newMod = {
+      ...modForm,
+      credits: parseInt(modForm.credits) || 4,
+      color: '#5FA83C',
+    };
+    setLocalMods(prev => [...prev, newMod]);
+    toast({ type:'success', title:'Module created', desc: modForm.name + ' added to catalogue.' });
+    setAddingM(false);
+  };
+
   return (
     <>
       <div className="page-head">
@@ -554,10 +616,16 @@ function Modules({ role, toast }) {
           <h1>{t('nav.Modules')}</h1>
           <div className="sub">{lang==='fr'?'Catalogue des modules académiques':'Academic module catalogue'}</div>
         </div>
-        {(role==='admin'||role==='scolarite') && <div className="page-actions"><button className="btn btn-primary btn-sm"><Icon name="plus" size={14}/>{lang==='fr'?'Nouveau module':'New module'}</button></div>}
+        {(role==='admin'||role==='scolarite') && (
+          <div className="page-actions">
+            <button className="btn btn-primary btn-sm" onClick={openAddMod}>
+              <Icon name="plus" size={14}/>{lang==='fr'?'Nouveau module':'New module'}
+            </button>
+          </div>
+        )}
       </div>
       <div className="grid-3">
-        {MODULES.map(m => (
+        {localMods.map(m => (
           <div key={m.code} className="card">
             <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14}}>
               <div>
@@ -576,6 +644,43 @@ function Modules({ role, toast }) {
           </div>
         ))}
       </div>
+
+      {/* New module modal */}
+      {addingM && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setAddingM(false)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{lang==='fr'?'Nouveau module':'New module'}</h3>
+              <button className="tb-btn" onClick={()=>setAddingM(false)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field">
+                  <label>Code</label>
+                  <input value={modForm.code} onChange={e=>setModForm(f=>({...f,code:e.target.value}))} placeholder="e.g. CS401"/>
+                </div>
+                <div className="field">
+                  <label>Name</label>
+                  <input value={modForm.name} onChange={e=>setModForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Machine Learning"/>
+                </div>
+                <div className="field">
+                  <label>Credits</label>
+                  <input type="number" min="1" max="10" value={modForm.credits} onChange={e=>setModForm(f=>({...f,credits:e.target.value}))}/>
+                </div>
+                <div className="field">
+                  <label>Instructor</label>
+                  <input value={modForm.teacher} onChange={e=>setModForm(f=>({...f,teacher:e.target.value}))} placeholder="Prof. Name"/>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>setAddingM(false)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveNewMod}>{t('btn.save')}</button>
+            </div>
+          </div>
+        </>
+      )}
 
       {detail && (
         <>
@@ -742,11 +847,32 @@ function Branches({ toast }) {
   const [detail, setDetail] = uSP(null);
   const [editB, setEditB] = uSP(null);
   const [editForm, setEditForm] = uSP({});
+  const [addingB, setAddingB] = uSP(false);
+  const [addForm, setAddForm] = uSP({ code:'', name:'', head:'', color:'#5FA83C' });
 
   const openEditB = (b) => {
     setEditForm({ code: b.code, name: b.name, head: b.head||'', color: b.color||'#5FA83C' });
     setEditB(b);
     setDetail(null);
+  };
+
+  const openAddB = () => {
+    setAddForm({ code:'', name:'', head:'', color:'#5FA83C' });
+    setAddingB(true);
+  };
+
+  const saveNewBranch = () => {
+    if (!addForm.code.trim() || !addForm.name.trim()) {
+      toast({ type:'error', title:'Code and name are required' });
+      return;
+    }
+    BRANCHES.push({
+      ...addForm,
+      students: 0,
+      groups: 0,
+    });
+    toast({ type:'success', title:'Branch created', desc: addForm.name + ' has been added.' });
+    setAddingB(false);
   };
 
   return (
@@ -756,7 +882,11 @@ function Branches({ toast }) {
           <h1>{t('nav.Branches')}</h1>
           <div className="sub">{lang==='fr'?'Filières et départements':'Academic branches and departments'}</div>
         </div>
-        <div className="page-actions"><button className="btn btn-primary btn-sm"><Icon name="plus" size={14}/>{lang==='fr'?'Nouvelle filière':'New branch'}</button></div>
+        <div className="page-actions">
+          <button className="btn btn-primary btn-sm" onClick={openAddB}>
+            <Icon name="plus" size={14}/>{lang==='fr'?'Nouvelle filière':'New branch'}
+          </button>
+        </div>
       </div>
       <div className="grid-2">
         {BRANCHES.map(b => (
@@ -827,6 +957,43 @@ function Branches({ toast }) {
             <div className="drawer-foot">
               <button className="btn btn-ghost" onClick={()=>setDetail(null)}>{t('btn.close')}</button>
               <button className="btn btn-primary" onClick={()=>openEditB(detail)}><Icon name="edit" size={14}/>{t('btn.edit')}</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* New branch modal */}
+      {addingB && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setAddingB(false)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{lang==='fr'?'Nouvelle filière':'New branch'}</h3>
+              <button className="tb-btn" onClick={()=>setAddingB(false)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field">
+                  <label>Code</label>
+                  <input value={addForm.code} onChange={e=>setAddForm(f=>({...f,code:e.target.value}))} placeholder="e.g. GL"/>
+                </div>
+                <div className="field">
+                  <label>Name</label>
+                  <input value={addForm.name} onChange={e=>setAddForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Génie Logiciel"/>
+                </div>
+                <div className="field">
+                  <label>Department head</label>
+                  <input value={addForm.head} onChange={e=>setAddForm(f=>({...f,head:e.target.value}))} placeholder="Prof. Name"/>
+                </div>
+                <div className="field">
+                  <label>Color</label>
+                  <input type="color" value={addForm.color} onChange={e=>setAddForm(f=>({...f,color:e.target.value}))}/>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>setAddingB(false)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveNewBranch}>{t('btn.save')}</button>
             </div>
           </div>
         </>
