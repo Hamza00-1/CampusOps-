@@ -54,7 +54,7 @@ function Login({ onAuth }) {
     <div className="login">
       <div className="login-hero">
         <div className="logo">
-          <div className="logo-mark">C</div>
+          <img src="uploads/pasted-1778117860793-0.png" alt="UEMF Logo" style={{height: 48, width: 'auto'}} />
           <div className="logo-txt">CampusOps</div>
         </div>
         <div className="hero-body">
