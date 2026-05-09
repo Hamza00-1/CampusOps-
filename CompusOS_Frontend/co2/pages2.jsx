@@ -1,20 +1,218 @@
 // CampusOps — Pages part 2: Payments, Users, Groups, Notifications, Progress, Settings
 const { useState: uSP2, useMemo: uMP2, useEffect: uEP2 } = React;
 
+// ─── ACTION NAV MAP ───
+const ACTION_NAV = {
+  'View student': 'users',
+  'Contact': 'users',
+  'Open grades': 'grades',
+  'View invoice': 'payments',
+  'Review payments': 'payments',
+};
+
+// ─── ROLE-BASED NOTIFICATIONS GENERATOR ───
+function generateRoleNotifications(role) {
+  const now = new Date();
+  const fmt = (d) => d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const today = fmt(now);
+
+  if (role === 'admin') {
+    const overdue = (PAYMENTS || []).filter(p => p.status === 'overdue');
+    const atRisk  = (STUDENTS || []).filter(s => s.att < 70);
+    const items = [];
+    overdue.slice(0,3).forEach((p,i) => {
+      items.push({
+        id: 'adm-pay-' + i, type: 'alert', read: false,
+        title: `Overdue payment: ${p.student}`,
+        desc: `Invoice ${p.id} — ${p.amount?.toLocaleString?.() || p.amount} MAD is overdue since ${p.date}.`,
+        time: today,
+        actions: ['View invoice', 'Contact'],
+      });
+    });
+    atRisk.slice(0,3).forEach((s,i) => {
+      items.push({
+        id: 'adm-att-' + i, type: 'alert', read: false,
+        title: `At-risk attendance: ${s.name}`,
+        desc: `Attendance is ${s.att}% — below the 70% threshold. Immediate review recommended.`,
+        time: today,
+        actions: ['View student'],
+      });
+    });
+    items.push({
+      id: 'adm-grd-1', type: 'reminder', read: false,
+      title: 'Grade submission deadline approaching',
+      desc: 'Semester grade submissions close in 3 days. Please ensure all teachers have submitted.',
+      time: today,
+      actions: ['Open grades'],
+    });
+    items.push({
+      id: 'adm-pay-ok', type: 'success', read: true,
+      title: 'Payment batch processed',
+      desc: '12 tuition payments confirmed this week. Collection rate is now 84%.',
+      time: today,
+      actions: ['Review payments'],
+    });
+    items.push({
+      id: 'adm-sch-1', type: 'info', read: true,
+      title: 'Schedule published for next semester',
+      desc: 'The planning for S2 2024-25 has been finalized and is visible to all groups.',
+      time: today,
+    });
+    return items;
+  }
+
+  if (role === 'scolarite') {
+    const overdue = (PAYMENTS || []).filter(p => p.status === 'overdue');
+    const atRisk  = (STUDENTS || []).filter(s => s.att < 70);
+    const items = [];
+    overdue.slice(0,3).forEach((p,i) => {
+      items.push({
+        id: 'sco-pay-' + i, type: 'alert', read: false,
+        title: `Overdue payment: ${p.student}`,
+        desc: `Invoice ${p.id} — ${p.amount?.toLocaleString?.() || p.amount} MAD overdue since ${p.date}.`,
+        time: today,
+        actions: ['View invoice', 'Contact'],
+      });
+    });
+    atRisk.slice(0,3).forEach((s,i) => {
+      items.push({
+        id: 'sco-att-' + i, type: 'alert', read: false,
+        title: `At-risk attendance: ${s.name}`,
+        desc: `${s.name} has ${s.att}% attendance in group ${s.group}. Official warning may be required.`,
+        time: today,
+        actions: ['View student'],
+      });
+    });
+    items.push({
+      id: 'sco-pay-ok', type: 'success', read: true,
+      title: 'Payment received',
+      desc: 'A new tuition payment has been confirmed. Updated records are available.',
+      time: today,
+      actions: ['Review payments'],
+    });
+    items.push({
+      id: 'sco-enr-1', type: 'info', read: true,
+      title: 'New student enrollment',
+      desc: '3 new students have been enrolled this week across L2 and L3 groups.',
+      time: today,
+    });
+    return items;
+  }
+
+  if (role === 'enseignant') {
+    const uid = window._userId;
+    const myGroups = ['L3-INFO-A', 'L3-INFO-B'];
+    const atRisk = (STUDENTS || []).filter(s => myGroups.includes(s.group) && s.att < 75);
+    const items = [];
+    items.push({
+      id: 'ens-grd-1', type: 'reminder', read: false,
+      title: 'Grade submission deadline — CS301',
+      desc: 'You have 28 ungraded midterm submissions for CS301. Deadline: Friday 23:59.',
+      time: today,
+      actions: ['Open grades'],
+    });
+    items.push({
+      id: 'ens-grd-2', type: 'reminder', read: false,
+      title: 'Homework #4 pending review',
+      desc: '14 homework submissions are awaiting your review for CS301.',
+      time: today,
+      actions: ['Open grades'],
+    });
+    atRisk.slice(0,3).forEach((s,i) => {
+      items.push({
+        id: 'ens-att-' + i, type: 'alert', read: false,
+        title: `Attendance alert: ${s.name}`,
+        desc: `${s.name} (${s.group}) has ${s.att}% attendance in your class — below the 75% threshold.`,
+        time: today,
+        actions: ['View student'],
+      });
+    });
+    items.push({
+      id: 'ens-sch-1', type: 'info', read: true,
+      title: 'Schedule update',
+      desc: 'Your Thursday CS301 session has been moved to room B-202. Check the Planning tab.',
+      time: today,
+    });
+    return items;
+  }
+
+  if (role === 'etudiant') {
+    const me = ROLES.etudiant;
+    const myPayment = (PAYMENTS || []).find(p =>
+      p.student === me.name || (window._userId && p.studentId === window._userId)
+    );
+    const items = [];
+    if (myPayment && (myPayment.status === 'overdue' || myPayment.status === 'pending')) {
+      items.push({
+        id: 'etu-pay-1', type: 'alert', read: false,
+        title: 'Payment due',
+        desc: `Your tuition invoice (${myPayment.id}) of ${myPayment.amount?.toLocaleString?.() || myPayment.amount} MAD is ${myPayment.status}. Please settle at the finance office.`,
+        time: myPayment.date || today,
+        actions: ['View invoice'],
+      });
+    }
+    items.push({
+      id: 'etu-grd-1', type: 'success', read: false,
+      title: 'New grades posted',
+      desc: 'Your grades for CS301 midterm have been published. Check the Grades tab.',
+      time: today,
+      actions: ['Open grades'],
+    });
+    items.push({
+      id: 'etu-sch-1', type: 'info', read: true,
+      title: 'Schedule update',
+      desc: 'Your Wednesday session has been moved to room A-101. Check the Planning tab for details.',
+      time: today,
+    });
+    items.push({
+      id: 'etu-att-1', type: 'reminder', read: true,
+      title: 'Attendance reminder',
+      desc: 'You have 2 absences this month. Keep your attendance above 80% to stay in good standing.',
+      time: today,
+    });
+    return items;
+  }
+
+  // Fallback
+  return NOTIFICATIONS || [];
+}
+
 // ─── PAYMENTS ───
 function Payments({ role, toast }){
   const { t, lang } = useI18n();
   const [filter, setFilter] = uSP2('all');
+  const [receipt, setReceipt] = uSP2(null);
   const me = ROLES.etudiant;
+
+  // For student: show all PAYMENTS (API already filters); fallback to name match for mock data
   let rows = PAYMENTS;
-  if(role==='etudiant') rows = rows.filter(p=>p.student===me.name);
-  if(filter!=='all') rows = rows.filter(p=>p.status===filter);
+  if (role === 'etudiant') {
+    const uid = window._userId;
+    const filtered = rows.filter(p =>
+      (uid && (p.studentId === uid || p.userId === uid)) ||
+      p.student === me.name
+    );
+    rows = filtered.length > 0 ? filtered : rows.filter(p => p.student === me.name);
+  }
+  if (filter !== 'all') rows = rows.filter(p => p.status === filter);
+
   const totals = {
     paid: PAYMENTS.filter(p=>p.status==='paid').reduce((a,p)=>a+p.amount,0),
     pending: PAYMENTS.filter(p=>p.status==='pending'||p.status==='partial').reduce((a,p)=>a+p.amount,0),
     overdue: PAYMENTS.filter(p=>p.status==='overdue').reduce((a,p)=>a+p.amount,0),
   };
-  const fmt = (n) => n.toLocaleString('en-US') + ' MAD';
+  const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-US') : n) + ' MAD';
+
+  const openReceipt = (p) => setReceipt(p);
+  const closeReceipt = () => setReceipt(null);
+
+  const sendToStudent = (p) => {
+    toast({ type:'success', title:'Invoice sent', desc:`Receipt for ${p.student} has been sent via email.` });
+  };
+
+  const printReceipt = () => {
+    window.print();
+  };
 
   return (
     <>
@@ -42,7 +240,12 @@ function Payments({ role, toast }){
           <div className="meta">{rows.length} invoices</div>
         </div>
         <table className="tbl">
-          <thead><tr><th>Invoice</th><th>Student</th><th>Group</th><th>Type</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Invoice</th><th>Student</th><th>Group</th><th>Type</th>
+              <th>Amount</th><th>Status</th><th>Due</th><th></th>
+            </tr>
+          </thead>
           <tbody>
             {rows.map(p => (
               <tr key={p.id}>
@@ -53,11 +256,82 @@ function Payments({ role, toast }){
                 <td className="mono" style={{fontWeight:600}}>{fmt(p.amount)}</td>
                 <td><span className={`pill ${p.status}`}><span className="d"></span>{t('pay.'+p.status, p.status)}</span></td>
                 <td style={{color:'var(--text-2)',fontSize:12.5}}>{p.date}</td>
+                <td style={{textAlign:'right'}}>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>openReceipt(p)}>
+                    Receipt
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Receipt / Invoice modal */}
+      {receipt && (
+        <>
+          <div className="drawer-bg open" onClick={closeReceipt}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>Invoice / Receipt</h3>
+              <button className="tb-btn" onClick={closeReceipt}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div style={{border:'1px solid var(--border)',borderRadius:10,padding:'20px 24px',background:'var(--bg)'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
+                  <div>
+                    <div style={{fontSize:20,fontWeight:800,fontFamily:'var(--head-font)',color:'var(--accent)'}}>CampusOps</div>
+                    <div style={{fontSize:11,color:'var(--text-3)',marginTop:2}}>Official Payment Receipt</div>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontSize:12,fontFamily:'var(--mono)',fontWeight:700,color:'var(--text)'}}>{receipt.id}</div>
+                    <div style={{fontSize:11,color:'var(--text-3)',marginTop:2}}>{receipt.date}</div>
+                  </div>
+                </div>
+                <div style={{height:1,background:'var(--border)',marginBottom:16}}></div>
+                <div className="grid-2" style={{gap:'10px 24px',fontSize:13}}>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:3}}>Student</div>
+                    <div style={{fontWeight:600}}>{receipt.student}</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:3}}>Group</div>
+                    <div>{receipt.group || '—'}</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:3}}>Payment type</div>
+                    <div>{receipt.type}</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:3}}>Method</div>
+                    <div>{receipt.method || '—'}</div>
+                  </div>
+                </div>
+                <div style={{height:1,background:'var(--border)',margin:'16px 0'}}></div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <div style={{fontSize:13,color:'var(--text-2)'}}>Amount due</div>
+                  <div style={{fontSize:22,fontWeight:800,fontFamily:'var(--head-font)',color:'var(--text)'}}>{fmt(receipt.amount)}</div>
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
+                  <div style={{fontSize:13,color:'var(--text-2)'}}>Status</div>
+                  <span className={`pill ${receipt.status}`}><span className="d"></span>{receipt.status}</span>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={printReceipt}>
+                Print
+              </button>
+              {(role === 'admin' || role === 'scolarite') && (
+                <button className="btn btn-ghost" onClick={()=>{ sendToStudent(receipt); closeReceipt(); }}>
+                  Send to student
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={closeReceipt}>{lang==='fr'?'Fermer':'Close'}</button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -67,11 +341,73 @@ function Users({ toast }){
   const { t, lang } = useI18n();
   const [q, setQ] = uSP2('');
   const [roleFilter, setRoleFilter] = uSP2('all');
+  const [, force] = uSP2(0);
+  const [inviting, setInviting] = uSP2(false);
+  const [inviteForm, setInviteForm] = uSP2({ name:'', email:'', role:'etudiant', branch: BRANCHES[0]?.name || '—', status:'active' });
+  const [editingU, setEditingU] = uSP2(null);
+  const [editForm, setEditForm] = uSP2({});
+
   const filtered = USERS_LIST.filter(u => {
     if(roleFilter!=='all' && u.role!==roleFilter) return false;
     if(q && !(u.name+' '+u.email+' '+u.branch).toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
+
+  const openInvite = () => {
+    setInviteForm({ name:'', email:'', role:'etudiant', branch: BRANCHES[0]?.name || '—', status:'active' });
+    setInviting(true);
+  };
+
+  const saveInvite = () => {
+    if (!inviteForm.name.trim() || !inviteForm.email.trim()) {
+      toast({ type:'error', title:'Name and email are required' }); return;
+    }
+    if (!/\S+@\S+\.\S+/.test(inviteForm.email)) {
+      toast({ type:'error', title:'Invalid email address' }); return;
+    }
+    const colors = ['#5FA83C','#7C3AED','#F59E0B','#0891B2','#DC2626','#7CB342','#DB2777'];
+    const newUser = {
+      id: 'U-'+String(USERS_LIST.length+1).padStart(3,'0'),
+      name: inviteForm.name,
+      email: inviteForm.email,
+      role: inviteForm.role,
+      branch: inviteForm.branch,
+      status: inviteForm.status,
+      init: inviteForm.name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase(),
+      color: colors[USERS_LIST.length % colors.length],
+    };
+    USERS_LIST.push(newUser);
+    toast({ type:'success', title:'Invitation sent', desc: `${inviteForm.email} will receive a sign-up link.` });
+    setInviting(false);
+    force(x=>x+1);
+  };
+
+  const openEditU = (u) => {
+    setEditForm({ name:u.name, email:u.email, role:u.role, branch:u.branch, status:u.status });
+    setEditingU(u);
+  };
+
+  const saveEditU = () => {
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      toast({ type:'error', title:'Name and email are required' }); return;
+    }
+    const idx = USERS_LIST.findIndex(x => x.id === editingU.id);
+    if (idx >= 0) {
+      USERS_LIST[idx] = { ...USERS_LIST[idx], ...editForm, init: editForm.name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase() };
+    }
+    toast({ type:'success', title:'User updated', desc: editForm.name + ' saved.' });
+    setEditingU(null);
+    force(x=>x+1);
+  };
+
+  const deleteUser = (u) => {
+    const idx = USERS_LIST.findIndex(x => x.id === u.id);
+    if (idx >= 0) USERS_LIST.splice(idx, 1);
+    toast({ type:'success', title:'User deleted', desc: u.name + ' has been removed.' });
+    setEditingU(null);
+    force(x=>x+1);
+  };
+
   return (
     <>
       <div className="page-head">
@@ -80,7 +416,7 @@ function Users({ toast }){
           <div className="sub">{lang==='fr'?'Tous les utilisateurs du système':'All system users'}</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-primary btn-sm"><Icon name="plus" size={14}/>{lang==='fr'?'Inviter':'Invite user'}</button>
+          <button className="btn btn-primary btn-sm" onClick={openInvite}><Icon name="plus" size={14}/>{lang==='fr'?'Inviter':'Invite user'}</button>
         </div>
       </div>
       <div className="card">
@@ -115,13 +451,121 @@ function Users({ toast }){
                 <td>{u.branch}</td>
                 <td><span className={`pill ${u.status==='active'?'paid':'overdue'}`}><span className="d"></span>{u.status}</span></td>
                 <td style={{textAlign:'right'}}>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>toast({type:'info',title:'Edit '+u.name})}><Icon name="edit" size={14}/></button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>openEditU(u)}><Icon name="edit" size={14}/></button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Invite user modal */}
+      {inviting && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setInviting(false)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{lang==='fr'?'Inviter un utilisateur':'Invite user'}</h3>
+              <button className="tb-btn" onClick={()=>setInviting(false)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field" style={{gridColumn:'1/-1'}}>
+                  <label>Full name</label>
+                  <input value={inviteForm.name} onChange={e=>setInviteForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Karim Mansouri"/>
+                </div>
+                <div className="field" style={{gridColumn:'1/-1'}}>
+                  <label>Email address</label>
+                  <input type="email" value={inviteForm.email} onChange={e=>setInviteForm(f=>({...f,email:e.target.value}))} placeholder="user@uemf.ma"/>
+                </div>
+                <div className="field">
+                  <label>Role</label>
+                  <select value={inviteForm.role} onChange={e=>setInviteForm(f=>({...f,role:e.target.value}))}>
+                    <option value="etudiant">Étudiant</option>
+                    <option value="enseignant">Enseignant</option>
+                    <option value="scolarite">Scolarité</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Branch</label>
+                  <select value={inviteForm.branch} onChange={e=>setInviteForm(f=>({...f,branch:e.target.value}))}>
+                    <option value="—">—</option>
+                    {BRANCHES.map(b=><option key={b.code} value={b.name}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div className="field" style={{gridColumn:'1/-1'}}>
+                  <label>Status</label>
+                  <select value={inviteForm.status} onChange={e=>setInviteForm(f=>({...f,status:e.target.value}))}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{marginTop:14,padding:'10px 12px',background:'var(--accent-50)',borderRadius:8,fontSize:12,color:'var(--accent)',border:'1px solid var(--accent-100)'}}>
+                An invitation email with a temporary password will be sent to the user.
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>setInviting(false)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveInvite}>{lang==='fr'?'Envoyer':'Send invitation'}</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Edit user modal */}
+      {editingU && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setEditingU(null)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{lang==='fr'?'Modifier utilisateur':'Edit user'} — {editingU.name}</h3>
+              <button className="tb-btn" onClick={()=>setEditingU(null)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field" style={{gridColumn:'1/-1'}}>
+                  <label>Full name</label>
+                  <input value={editForm.name||''} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))}/>
+                </div>
+                <div className="field" style={{gridColumn:'1/-1'}}>
+                  <label>Email</label>
+                  <input type="email" value={editForm.email||''} onChange={e=>setEditForm(f=>({...f,email:e.target.value}))}/>
+                </div>
+                <div className="field">
+                  <label>Role</label>
+                  <select value={editForm.role||'etudiant'} onChange={e=>setEditForm(f=>({...f,role:e.target.value}))}>
+                    <option value="etudiant">Étudiant</option>
+                    <option value="enseignant">Enseignant</option>
+                    <option value="scolarite">Scolarité</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Branch</label>
+                  <select value={editForm.branch||'—'} onChange={e=>setEditForm(f=>({...f,branch:e.target.value}))}>
+                    <option value="—">—</option>
+                    {BRANCHES.map(b=><option key={b.code} value={b.name}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div className="field" style={{gridColumn:'1/-1'}}>
+                  <label>Status</label>
+                  <select value={editForm.status||'active'} onChange={e=>setEditForm(f=>({...f,status:e.target.value}))}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-danger-soft" style={{marginRight:'auto'}} onClick={()=>{ if(confirm('Delete '+editingU.name+'?')) deleteUser(editingU); }}><Icon name="trash" size={14}/> Delete</button>
+              <button className="btn btn-ghost" onClick={()=>setEditingU(null)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveEditU}>{t('btn.save')}</button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -132,6 +576,8 @@ function Groups({ toast }){
   const [view, setView] = uSP2(null);
   const [edit, setEdit] = uSP2(null);
   const [editForm, setEditForm] = uSP2({});
+  const [addingG, setAddingG] = uSP2(false);
+  const [addGForm, setAddGForm] = uSP2({ id:'', name:'', branch: BRANCHES[0]?.name || '', year:'2024-25', students:0 });
 
   const openEdit = (g) => {
     setEditForm({ id: g.id, name: g.name, branch: g.branch, year: g.year, students: g.students });
@@ -146,6 +592,27 @@ function Groups({ toast }){
     setEdit(null);
   };
 
+  const openAddG = () => {
+    setAddGForm({ id:'', name:'', branch: BRANCHES[0]?.name || '', year:'2024-25', students:0 });
+    setAddingG(true);
+  };
+
+  const saveNewGroup = () => {
+    if (!addGForm.id.trim() || !addGForm.name.trim()) {
+      toast({ type:'error', title:'ID and name are required' });
+      return;
+    }
+    GROUPS_LIST.push({
+      id: addGForm.id,
+      name: addGForm.name,
+      branch: addGForm.branch,
+      year: addGForm.year,
+      students: parseInt(addGForm.students) || 0,
+    });
+    toast({ type:'success', title:'Group created', desc: addGForm.name + ' has been added.' });
+    setAddingG(false);
+  };
+
   const groupStudents = (g) => STUDENTS.filter(s => s.group === g.id || s.group === g.name);
 
   return (
@@ -155,7 +622,11 @@ function Groups({ toast }){
           <h1>{t('nav.Groups')}</h1>
           <div className="sub">{lang==='fr'?'Groupes et classes':'Class groups across all branches'}</div>
         </div>
-        <div className="page-actions"><button className="btn btn-primary btn-sm"><Icon name="plus" size={14}/>{lang==='fr'?'Nouveau groupe':'New group'}</button></div>
+        <div className="page-actions">
+          <button className="btn btn-primary btn-sm" onClick={openAddG}>
+            <Icon name="plus" size={14}/>{lang==='fr'?'Nouveau groupe':'New group'}
+          </button>
+        </div>
       </div>
       <div className="grid-3">
         {GROUPS_LIST.map(g => {
@@ -224,6 +695,49 @@ function Groups({ toast }){
         </>
       )}
 
+      {/* New group modal */}
+      {addingG && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setAddingG(false)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{lang==='fr'?'Nouveau groupe':'New group'}</h3>
+              <button className="tb-btn" onClick={()=>setAddingG(false)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field">
+                  <label>Group ID</label>
+                  <input value={addGForm.id} onChange={e=>setAddGForm(f=>({...f,id:e.target.value}))} placeholder="e.g. L3-INFO-C"/>
+                </div>
+                <div className="field">
+                  <label>Name</label>
+                  <input value={addGForm.name} onChange={e=>setAddGForm(f=>({...f,name:e.target.value}))} placeholder="e.g. L3 Informatique C"/>
+                </div>
+                <div className="field">
+                  <label>Branch</label>
+                  <select value={addGForm.branch} onChange={e=>setAddGForm(f=>({...f,branch:e.target.value}))}>
+                    {BRANCHES.map(b=><option key={b.code} value={b.name}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Academic year</label>
+                  <input value={addGForm.year} onChange={e=>setAddGForm(f=>({...f,year:e.target.value}))} placeholder="2024-25"/>
+                </div>
+                <div className="field" style={{gridColumn:'1/-1'}}>
+                  <label>Capacity</label>
+                  <input type="number" value={addGForm.students} onChange={e=>setAddGForm(f=>({...f,students:parseInt(e.target.value)||0}))} min="0"/>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>setAddingG(false)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveNewGroup}>{t('btn.save')}</button>
+            </div>
+          </div>
+        </>
+      )}
+
       {edit && (
         <>
           <div className="drawer-bg open" onClick={()=>setEdit(null)}></div>
@@ -258,15 +772,26 @@ function Groups({ toast }){
 }
 
 // ─── NOTIFICATIONS ───
-function Notifications({ role, toast }){
+function Notifications({ role, toast, onNav }){
   const { t, lang } = useI18n();
   const isAdmin = role === 'admin' || role === 'scolarite';
-  const [view, setView] = uSP2(isAdmin ? 'inbox' : 'inbox');
+  const [view, setView] = uSP2('inbox');
   const [filter, setFilter] = uSP2('all');
-  const [items, setItems] = uSP2(NOTIFICATIONS);
+  // Initialize items with role-specific generated notifications
+  const [items, setItems] = uSP2(() => generateRoleNotifications(role));
   const filtered = items.filter(n => filter==='all' || (filter==='unread' && !n.read) || filter===n.type);
   const markAll = () => { setItems(items.map(i=>({...i, read:true}))); toast({type:'success',title:'All notifications marked as read'}); };
   const markOne = (id) => setItems(items.map(i => i.id===id?{...i,read:true}:i));
+
+  // Handle action button clicks using ACTION_NAV map
+  const handleAction = (action) => {
+    const page = ACTION_NAV[action];
+    if (page && onNav) {
+      onNav(page);
+    } else {
+      toast({ type:'info', title: action });
+    }
+  };
 
   // Composer state (admin/scolarite only)
   const [compType, setCompType] = uSP2('info');
@@ -356,7 +881,9 @@ function Notifications({ role, toast }){
                   <div className="tm">{n.time}</div>
                   {n.actions && (
                     <div className="actions">
-                      {n.actions.map((a,i) => <button key={i} onClick={(e)=>{e.stopPropagation(); toast({type:'info',title:a});}}>{a}</button>)}
+                      {n.actions.map((a,i) => (
+                        <button key={i} onClick={(e)=>{ e.stopPropagation(); handleAction(a); }}>{a}</button>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -587,15 +1114,56 @@ function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
   const [tab, setTab] = uSP2('account');
   const [phone, setPhone] = uSP2(() => localStorage.getItem('co2_phone') || '');
   const [density, setDensity] = uSP2(() => localStorage.getItem('co2_density') || 'comfortable');
+  const [changingPwd, setChangingPwd] = uSP2(false);
+  const [pwdForm, setPwdForm] = uSP2({ current:'', next:'', confirm:'' });
+  const [managingTokens, setManagingTokens] = uSP2(false);
+  const [tokens, setTokens] = uSP2(() => {
+    try { return JSON.parse(localStorage.getItem('co2_tokens')||'[]'); } catch { return []; }
+  });
+  const [newTokenName, setNewTokenName] = uSP2('');
+  const [revealedToken, setRevealedToken] = uSP2(null);
   const r = ROLES[role];
 
   uEP2(() => {
     document.documentElement.setAttribute('data-density', density);
   }, [density]);
 
+  uEP2(() => {
+    localStorage.setItem('co2_tokens', JSON.stringify(tokens));
+  }, [tokens]);
+
   const applyDensity = (d) => {
     setDensity(d);
     localStorage.setItem('co2_density', d);
+  };
+
+  const submitPwd = () => {
+    if (!pwdForm.current.trim()) { toast({type:'error', title:'Current password required'}); return; }
+    if (pwdForm.next.length < 8) { toast({type:'error', title:'Password must be at least 8 characters'}); return; }
+    if (pwdForm.next !== pwdForm.confirm) { toast({type:'error', title:'Passwords do not match'}); return; }
+    toast({type:'success', title:'Password changed', desc:'Your password has been updated successfully.'});
+    setPwdForm({ current:'', next:'', confirm:'' });
+    setChangingPwd(false);
+  };
+
+  const generateToken = () => {
+    if (!newTokenName.trim()) { toast({type:'error', title:'Token name is required'}); return; }
+    const tk = 'co2_' + Math.random().toString(36).slice(2,12) + Math.random().toString(36).slice(2,12);
+    const newTok = { id: Date.now(), name: newTokenName, token: tk, created: new Date().toLocaleDateString(), lastUsed: '—' };
+    setTokens(prev => [newTok, ...prev]);
+    setRevealedToken(newTok);
+    setNewTokenName('');
+    toast({type:'success', title:'Token created', desc:'Copy it now — it will not be shown again.'});
+  };
+
+  const revokeToken = (id) => {
+    setTokens(prev => prev.filter(t => t.id !== id));
+    toast({type:'success', title:'Token revoked'});
+  };
+
+  const copyToken = (txt) => {
+    navigator.clipboard?.writeText(txt);
+    toast({type:'success', title:'Copied to clipboard'});
   };
 
   return (
@@ -650,8 +1218,8 @@ function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
             <div>
               <h3 style={{marginBottom:14}}>{t('set.security')}</h3>
               <div className="setting-row">
-                <div><div className="t">{t('set.changePassword')}</div><div className="s">Use at least 12 characters with a mix of letters, numbers and symbols.</div></div>
-                <button className="btn btn-ghost btn-sm" onClick={()=>toast({type:'info',title:'Password reset email sent'})}>Change</button>
+                <div><div className="t">{t('set.changePassword')}</div><div className="s">Use at least 8 characters with a mix of letters, numbers and symbols.</div></div>
+                <button className="btn btn-ghost btn-sm" onClick={()=>setChangingPwd(true)}>Change</button>
               </div>
               <div className="setting-row">
                 <div><div className="t">{t('set.2fa')}</div><div className="s">Add an extra layer of security using an authenticator app or SMS code.</div></div>
@@ -659,11 +1227,11 @@ function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
               </div>
               <div className="setting-row">
                 <div><div className="t">Login alerts</div><div className="s">Email me when there's a sign-in from a new device or location.</div></div>
-                <button className="toggle on"></button>
+                <button className="toggle on" onClick={(e)=>{e.currentTarget.classList.toggle('on'); toast({type:'success',title:'Login alerts toggled'});}}></button>
               </div>
               <div className="setting-row">
-                <div><div className="t">API tokens</div><div className="s">Manage personal access tokens for integrations.</div></div>
-                <button className="btn btn-ghost btn-sm">Manage</button>
+                <div><div className="t">API tokens</div><div className="s">Manage personal access tokens for integrations. {tokens.length>0 && <strong>({tokens.length} active)</strong>}</div></div>
+                <button className="btn btn-ghost btn-sm" onClick={()=>setManagingTokens(true)}>Manage</button>
               </div>
             </div>
           )}
@@ -814,6 +1382,85 @@ function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
           )}
         </div>
       </div>
+
+      {/* Change password modal */}
+      {changingPwd && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setChangingPwd(false)}></div>
+          <div className="modal open" style={{width:480}}>
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{t('set.changePassword')}</h3>
+              <button className="tb-btn" onClick={()=>setChangingPwd(false)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="field" style={{marginBottom:12}}>
+                <label>Current password</label>
+                <input type="password" value={pwdForm.current} onChange={e=>setPwdForm(f=>({...f,current:e.target.value}))} autoFocus/>
+              </div>
+              <div className="field" style={{marginBottom:12}}>
+                <label>New password</label>
+                <input type="password" value={pwdForm.next} onChange={e=>setPwdForm(f=>({...f,next:e.target.value}))}/>
+                <div className="hint" style={{fontSize:11,color:'var(--text-3)',marginTop:4}}>At least 8 characters with letters, numbers, and symbols.</div>
+              </div>
+              <div className="field">
+                <label>Confirm new password</label>
+                <input type="password" value={pwdForm.confirm} onChange={e=>setPwdForm(f=>({...f,confirm:e.target.value}))}/>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>{ setChangingPwd(false); setPwdForm({current:'',next:'',confirm:''}); }}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={submitPwd}>Update password</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Manage API tokens modal */}
+      {managingTokens && (
+        <>
+          <div className="drawer-bg open" onClick={()=>{ setManagingTokens(false); setRevealedToken(null); }}></div>
+          <div className="modal open" style={{width:640}}>
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>API tokens</h3>
+              <button className="tb-btn" onClick={()=>{ setManagingTokens(false); setRevealedToken(null); }}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <p style={{fontSize:12.5,color:'var(--text-2)',marginBottom:14}}>Personal access tokens allow scripts and integrations to authenticate with the CampusOps API on your behalf.</p>
+
+              {revealedToken && (
+                <div style={{padding:'12px 14px',background:'var(--accent-50)',border:'1px solid var(--accent-100)',borderRadius:8,marginBottom:14}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'var(--accent)',marginBottom:6}}>New token created — copy it now (it will not be shown again):</div>
+                  <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                    <code style={{flex:1,padding:'8px 10px',background:'var(--surface)',borderRadius:6,fontFamily:'var(--mono)',fontSize:12,wordBreak:'break-all'}}>{revealedToken.token}</code>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>copyToken(revealedToken.token)}>Copy</button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{display:'flex',gap:8,marginBottom:14}}>
+                <input value={newTokenName} onChange={e=>setNewTokenName(e.target.value)} placeholder="Token name (e.g. CI/CD pipeline)" style={{flex:1,padding:'9px 12px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}/>
+                <button className="btn btn-primary btn-sm" onClick={generateToken}><Icon name="plus" size={14}/>Generate</button>
+              </div>
+
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Existing tokens ({tokens.length})</div>
+              {tokens.length === 0 && <div className="empty" style={{padding:24,fontSize:13}}>No tokens yet. Generate one above to get started.</div>}
+              {tokens.map(tk => (
+                <div key={tk.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:13.5}}>{tk.name}</div>
+                    <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{tk.token.slice(0,8)}…{tk.token.slice(-4)} • Created {tk.created} • Last used {tk.lastUsed}</div>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>copyToken(tk.token)}>Copy</button>
+                  <button className="btn btn-danger-soft btn-sm" onClick={()=>{ if(confirm('Revoke "'+tk.name+'"?')) revokeToken(tk.id); }}><Icon name="trash" size={14}/></button>
+                </div>
+              ))}
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-primary" onClick={()=>{ setManagingTokens(false); setRevealedToken(null); }}>Done</button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
