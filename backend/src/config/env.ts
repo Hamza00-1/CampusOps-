@@ -39,6 +39,17 @@ const envSchema = z.object({
 
     // Logging
     LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
+
+    // Notifications — Email (SMTP)
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().optional(),
+    SMTP_SECURE: z.string().optional().transform(v => v === 'true'),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().optional().default('CampusOps <noreply@campusops.ma>'),
+
+    // Notifications — Telegram
+    TELEGRAM_BOT_TOKEN: z.string().optional(),
 });
 
 // Parse and validate — will throw if invalid

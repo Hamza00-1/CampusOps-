@@ -46,6 +46,13 @@ enum GradeType {
   Project
 }
 
+enum NotificationType {
+  info
+  alert
+  reminder
+  success
+}
+
 // ============================================
 // Core Organizational Models
 // ============================================
@@ -212,12 +219,19 @@ model Payment {
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  senderId  String?          @map("sender_id")
   title     String
-  content   String   @db.Text
-  isRead    Boolean  @default(false) @map("is_read")
-  createdAt DateTime @default(now()) @map("created_at")
+  content   String           @db.Text
+  type      NotificationType @default(info)
+  channels  String[]         @default(["inapp"])
+  audience  String?          // 'all', 'all_students', 'all_teachers', 'group', 'user'
+  groupId   String?          @map("group_id")
+  isRead    Boolean          @default(false) @map("is_read")
+  emailSent Boolean          @default(false) @map("email_sent")
+  telegramSent Boolean       @default(false) @map("telegram_sent")
+  createdAt DateTime         @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

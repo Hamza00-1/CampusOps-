@@ -806,6 +806,22 @@ function Notifications({ role, toast, onNav }){
 
   const toggleCh = (ch) => setCompChannels(prev => ({...prev, [ch]: !prev[ch]}));
 
+  // Load real notifications from API on mount
+  const [realLoaded, setRealLoaded] = uSP2(false);
+  React.useEffect(() => {
+    if (realLoaded) return;
+    window.api.request('/notifications').then(res => {
+      if (res.data && res.data.length > 0) {
+        setItems(res.data.map(n => ({
+          id: n.id, type: n.type || 'info', title: n.title,
+          desc: n.content, time: new Date(n.createdAt).toLocaleString(),
+          read: n.isRead,
+        })));
+      }
+      setRealLoaded(true);
+    }).catch(() => setRealLoaded(true)); // fallback to mock data
+  }, []);
+
   const handleSend = async () => {
     if (!compTitle.trim()) { toast({type:'error', title:'Title is required'}); return; }
     if (!compBody.trim()) { toast({type:'error', title:'Message body is required'}); return; }
@@ -816,12 +832,14 @@ function Notifications({ role, toast, onNav }){
     const audienceLabel = compAudience === 'all_students' ? 'All students' : compAudience === 'all_teachers' ? 'All teachers' : compAudience === 'all' ? 'Everyone' : compAudience === 'group' ? `Group: ${compGroup || '?'}` : `User: ${compUser || '?'}`;
 
     try {
-      await window.api.request('/notifications', { method: 'POST', body: {
+      const res = await window.api.request('/notifications/broadcast', { method: 'POST', body: {
         title: compTitle, content: compBody, type: compType,
         audience: compAudience, groupId: compGroup || undefined, userId: compUser || undefined,
         channels,
       }});
-      toast({type:'success', title:'Notification sent!', desc:`Delivered to ${audienceLabel} via ${channels.join(', ')}`});
+      const result = res.data;
+      const channelSummary = (result.channels || []).map(c => `${c.channel}: ${c.delivered}/${c.total}`).join(', ');
+      toast({type:'success', title:'Notification broadcast sent!', desc:`${result.recipientCount} recipients — ${channelSummary}`});
     } catch(err) {
       // Mock mode fallback
       toast({type:'success', title:'Notification sent (Mock Mode)', desc:`Would deliver to ${audienceLabel} via ${channels.join(', ')}`});

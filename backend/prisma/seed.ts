@@ -330,11 +330,11 @@ async function main() {
   console.log('🔔 Creating notifications...');
   await prisma.notification.createMany({
     data: [
-      { userId: admin.id, title: 'Bienvenue sur CampusOps', content: 'Le système est opérationnel pour l\'année 2025/2026. Toutes les filières EIDIA sont configurées.' },
-      { userId: demoStudent.id, title: 'Paiement en attente', content: 'Votre mensualité de 5 000 MAD est due le mois prochain.' },
-      { userId: demoProf.id, title: 'Sessions planifiées', content: 'Vos sessions S8 pour CS & Cyber Security sont programmées cette semaine.' },
-      { userId: teachers['AI'].id, title: 'Rappel de saisie', content: 'Veuillez mettre à jour la progression du module NLP pour AI-G1 et AI-G2.' },
-      { userId: teachers['FS'].id, title: 'Nouveau semestre', content: 'Les modules S8 Full Stack sont maintenant disponibles dans le planning.' },
+      { userId: admin.id, title: 'Bienvenue sur CampusOps', content: 'Le système est opérationnel pour l\'année 2025/2026. Toutes les filières EIDIA sont configurées.', type: 'success' },
+      { userId: demoStudent.id, title: 'Paiement en attente', content: 'Votre mensualité de 5 000 MAD est due le mois prochain.', type: 'alert' },
+      { userId: demoProf.id, title: 'Sessions planifiées', content: 'Vos sessions S8 pour CS & Cyber Security sont programmées cette semaine.', type: 'info' },
+      { userId: teachers['AI'].id, title: 'Rappel de saisie', content: 'Veuillez mettre à jour la progression du module NLP pour AI-G1 et AI-G2.', type: 'reminder' },
+      { userId: teachers['FS'].id, title: 'Nouveau semestre', content: 'Les modules S8 Full Stack sont maintenant disponibles dans le planning.', type: 'info' },
     ],
   });
 
