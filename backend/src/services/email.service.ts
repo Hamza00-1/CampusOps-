@@ -64,7 +64,7 @@ function buildHtmlEmail(title: string, body: string, type: string = 'info'): str
       <div style="font-size:15px;color:#374151;line-height:1.7;white-space:pre-wrap;">${body}</div>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
       <div style="text-align:center;">
-        <a href="http://localhost:5000/CampusOps.html" style="display:inline-block;background:${color};color:white;padding:10px 28px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">Open CampusOps</a>
+        <a href="${env.APP_URL}" style="display:inline-block;background:${color};color:white;padding:10px 28px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">Open CampusOps</a>
       </div>
     </div>
     <!-- Footer -->

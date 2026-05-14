@@ -1,10 +1,20 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import { createHash } from 'crypto';
 import { env } from '../config/env';
 import { AuthPayload } from '../types';
 
 // ============================================
 // JWT Utilities — Sign, Verify, and Refresh
 // ============================================
+
+/**
+ * Hash a refresh token for safe DB storage.
+ * We never store the raw token — only the SHA-256 hash.
+ * On verification, hash the incoming token and compare.
+ */
+export function hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+}
 
 /**
  * Sign an access token (short-lived: 15m default).

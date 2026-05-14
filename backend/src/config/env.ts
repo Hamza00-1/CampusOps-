@@ -37,6 +37,9 @@ const envSchema = z.object({
     // CORS
     CORS_ORIGIN: z.string().default('http://localhost:5173'),
 
+    // App public URL (used in email links, etc.)
+    APP_URL: z.string().default('http://localhost:5173'),
+
     // Logging
     LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
 

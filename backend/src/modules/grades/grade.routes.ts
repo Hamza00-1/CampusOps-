@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { gradeController } from './grade.controller';
 import { authenticate } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, requireOwnerOrAdmin } from '../../middleware/rbac';
 import { validate } from '../../middleware/validator';
 import { createGradeSchema, updateGradeSchema, bulkCreateGradeSchema, gradeIdParam } from './grade.schemas';
 
@@ -35,7 +35,7 @@ router.get('/', authenticate, gradeController.findAll);
  *     responses:
  *       200:
  *         description: Student transcript with module averages and overall GPA */
-router.get('/transcript/:studentId', authenticate, gradeController.getTranscript);
+router.get('/transcript/:studentId', authenticate, requireOwnerOrAdmin('studentId'), gradeController.getTranscript);
 
 /** @swagger
  * /api/grades/{id}:

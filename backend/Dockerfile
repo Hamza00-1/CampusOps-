@@ -3,13 +3,13 @@
 # ============================================
 
 # ---------- Stage 1: Dependencies ----------
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 
 # ---------- Stage 2: Development ----------
-FROM node:20-alpine AS development
+FROM node:24-alpine AS development
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -18,7 +18,7 @@ EXPOSE 3000
 CMD ["npx", "tsx", "watch", "src/index.ts"]
 
 # ---------- Stage 3: Build ----------
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -26,7 +26,7 @@ RUN npx prisma generate
 RUN npx tsc
 
 # ---------- Stage 4: Production ----------
-FROM node:20-alpine AS production
+FROM node:24-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { paymentController } from './payment.controller';
 import { authenticate } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, requireOwnerOrAdmin } from '../../middleware/rbac';
 import { validate } from '../../middleware/validator';
 import { createPaymentSchema, updatePaymentSchema, paymentIdParam } from './payment.schemas';
 
@@ -34,7 +34,7 @@ router.get('/', authenticate, requireRole('Admin', 'Scolarite'), paymentControll
  *     responses:
  *       200:
  *         description: Total due, paid, balance, overdue count */
-router.get('/summary/:studentId', authenticate, paymentController.getStudentSummary);
+router.get('/summary/:studentId', authenticate, requireOwnerOrAdmin('studentId'), paymentController.getStudentSummary);
 router.get('/:id', authenticate, validate({ params: paymentIdParam }), paymentController.findById);
 
 /** @swagger

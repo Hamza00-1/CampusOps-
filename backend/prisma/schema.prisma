@@ -184,6 +184,9 @@ model Absence {
   session Planning @relation(fields: [sessionId], references: [id])
   student User     @relation("StudentAbsences", fields: [studentId], references: [id])
 
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+  @@index([createdAt])
   @@map("absences")
 }
 
@@ -199,6 +202,7 @@ model Progress {
   module        Module @relation(fields: [moduleId], references: [id])
   group         Group  @relation(fields: [groupId], references: [id])
 
+  @@unique([moduleId, groupId])
   @@map("progress_tracking")
 }
 
@@ -236,6 +240,8 @@ model Notification {
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([createdAt])
   @@map("notifications")
 }
 
@@ -257,5 +263,7 @@ model Grade {
   teacher User   @relation("TeacherGrades", fields: [teacherId], references: [id])
 
   @@unique([studentId, moduleId, gradeType, semester])
+  @@index([studentId])
+  @@index([createdAt])
   @@map("grades")
 }

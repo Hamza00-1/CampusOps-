@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3000/api';
+// API base URL — override by setting window.CAMPUS_API_URL before this script loads.
+// Example: <script>window.CAMPUS_API_URL = 'https://api.myschool.ma/api'</script>
+const API_URL = window.CAMPUS_API_URL || 'http://localhost:3000/api';
 
 const api = {
   getToken: () => localStorage.getItem('co2_access'),

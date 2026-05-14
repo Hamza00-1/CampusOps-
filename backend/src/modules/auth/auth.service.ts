@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database';
 import { hashPassword, comparePassword } from '../../utils/hash';
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt';
+import { signAccessToken, signRefreshToken, verifyRefreshToken, hashToken } from '../../utils/jwt';
 import { ApiError } from '../../middleware/errorHandler';
 import { AuthPayload } from '../../types';
 import { RegisterInput, LoginInput } from './auth.schemas';
@@ -70,10 +70,10 @@ export class AuthService {
         const accessToken = signAccessToken(payload);
         const refreshToken = signRefreshToken(user.id);
 
-        // Store refresh token hash in DB
+        // Store HASHED refresh token in DB (never store raw tokens)
         await prisma.user.update({
             where: { id: user.id },
-            data: { refreshToken },
+            data: { refreshToken: hashToken(refreshToken) },
         });
 
         return {
@@ -117,10 +117,10 @@ export class AuthService {
         const accessToken = signAccessToken(payload);
         const refreshToken = signRefreshToken(user.id);
 
-        // Store refresh token in DB
+        // Store HASHED refresh token in DB (never store raw tokens)
         await prisma.user.update({
             where: { id: user.id },
-            data: { refreshToken },
+            data: { refreshToken: hashToken(refreshToken) },
         });
 
         return {
@@ -151,13 +151,13 @@ export class AuthService {
             throw ApiError.unauthorized('Invalid or expired refresh token');
         }
 
-        // Find the user and verify stored token matches
+        // Find the user and verify stored token hash matches
         const user = await prisma.user.findUnique({
             where: { id: userId },
         });
 
-        if (!user || user.refreshToken !== refreshToken) {
-            // Token rotation: if stored token doesn't match,
+        if (!user || user.refreshToken !== hashToken(refreshToken)) {
+            // Token rotation: if stored hash doesn't match,
             // it might be stolen. Invalidate all tokens.
             if (user) {
                 await prisma.user.update({
@@ -179,10 +179,10 @@ export class AuthService {
         const newAccessToken = signAccessToken(payload);
         const newRefreshToken = signRefreshToken(user.id);
 
-        // Update stored refresh token
+        // Update stored refresh token hash
         await prisma.user.update({
             where: { id: user.id },
-            data: { refreshToken: newRefreshToken },
+            data: { refreshToken: hashToken(newRefreshToken) },
         });
 
         return {
