@@ -105,6 +105,9 @@ jobs:
         run: npm run db:seed
         env:
           DATABASE_URL: postgresql://campusops:campusops_secret@localhost:5432/campusops_test
+          JWT_ACCESS_SECRET: ci-integration-access-secret-32-chars-long
+          JWT_REFRESH_SECRET: ci-integration-refresh-secret-32-chars-long
+          NODE_ENV: test
 
       - name: Run integration tests
         run: npm run test:integration
