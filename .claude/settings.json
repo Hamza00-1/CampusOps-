@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Test-Path dist/index.js; Test-Path dist/app.js; \\(Get-ChildItem dist -Recurse -File | Measure-Object\\).Count)"
+    ]
+  }
+}

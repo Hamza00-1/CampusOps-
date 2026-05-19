@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\ibran\\\\OneDrive\\\\Desktop\\\\claude code\\\\CampusOps-\" -Recurse -Depth 3 | Select-Object FullName | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"C:\\\\Users\\\\ibran\\\\OneDrive\\\\Desktop\\\\claude code\\\\CampusOps-\"\\), \".\" } | Select-Object -First 200)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\ibran\\\\OneDrive\\\\Desktop\\\\claude code\\\\CampusOps-\\\\backend\" -File | Where-Object { $_.Name -match \"Dockerfile|docker-compose\" })",
+      "Bash(npm install *)",
+      "Bash(npx jest *)",
+      "Bash(npm run *)",
+      "Bash(npx prisma *)",
+      "Bash(npm test *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git commit -m 'docs: update progress.md with Phase 6-8 complete documentation *)",
+      "Bash(git commit -m 'docs: add phase6-8.md — detailed breakdown of all new work *)",
+      "PowerShell($dirs = Get-ChildItem src/modules -Directory; foreach \\($d in $dirs\\) { $files = Get-ChildItem $d.FullName -File | Select-Object -ExpandProperty Name; Write-Host \"$\\($d.Name\\): $\\($files -join ', '\\)\" })"
+    ]
+  }
+}
