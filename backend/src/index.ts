@@ -3,6 +3,8 @@ import { env } from './config/env';
 import { logger } from './middleware/logger';
 import { prisma } from './config/database';
 import { connectRedis, disconnectRedis } from './config/redis';
+import { verifyTelegramBot } from './services/telegram.service';
+import { startCron, stopCron } from './integrations/cron';
 
 // ============================================
 // CampusOps — Server Entry Point
@@ -17,7 +19,13 @@ async function bootstrap(): Promise<void> {
         // 2. Connect to Redis (non-blocking — continues if unavailable)
         await connectRedis();
 
-        // 3. Start Express server
+        // 3. Verify Telegram bot (non-blocking)
+        await verifyTelegramBot();
+
+        // 4. Start scheduled cron jobs
+        startCron();
+
+        // 5. Start Express server
         const server = app.listen(env.PORT, () => {
             logger.info(`
 ┌─────────────────────────────────────────────┐
@@ -47,6 +55,9 @@ async function bootstrap(): Promise<void> {
 
             await disconnectRedis();
             logger.info('🔴 Redis disconnected');
+
+            stopCron();
+            logger.info('⏰ Cron jobs stopped');
 
             process.exit(0);
         };

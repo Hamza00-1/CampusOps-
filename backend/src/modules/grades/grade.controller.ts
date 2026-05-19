@@ -17,7 +17,7 @@ export class GradeController {
 
     async findById(req: Request, res: Response, next: NextFunction) {
         try {
-            res.json(successResponse(await gradeService.findById(req.params.id), 'Grade retrieved'));
+            res.json(successResponse(await gradeService.findById(req.params['id'] as string), 'Grade retrieved'));
         } catch (e) { next(e); }
     }
 
@@ -37,20 +37,20 @@ export class GradeController {
 
     async update(req: Request, res: Response, next: NextFunction) {
         try {
-            res.json(successResponse(await gradeService.update(req.params.id, req.body), 'Grade updated'));
+            res.json(successResponse(await gradeService.update(req.params['id'] as string, req.body), 'Grade updated'));
         } catch (e) { next(e); }
     }
 
     async getTranscript(req: Request, res: Response, next: NextFunction) {
         try {
             const semester = req.query.semester as string | undefined;
-            res.json(successResponse(await gradeService.getStudentTranscript(req.params.studentId, semester), 'Transcript retrieved'));
+            res.json(successResponse(await gradeService.getStudentTranscript(req.params['studentId'] as string, semester), 'Transcript retrieved'));
         } catch (e) { next(e); }
     }
 
     async delete(req: Request, res: Response, next: NextFunction) {
         try {
-            await gradeService.delete(req.params.id);
+            await gradeService.delete(req.params['id'] as string);
             res.json(successResponse(null, 'Grade deleted'));
         } catch (e) { next(e); }
     }

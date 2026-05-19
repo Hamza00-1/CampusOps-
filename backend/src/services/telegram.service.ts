@@ -38,7 +38,7 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
             }),
         });
 
-        const data = await res.json();
+        const data = await res.json() as { ok: boolean; description?: string };
 
         if (!data.ok) {
             logger.error(`🤖 Telegram API error: ${data.description} (chatId=${chatId})`);
@@ -107,9 +107,9 @@ export async function verifyTelegramBot(): Promise<boolean> {
     try {
         const url = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/getMe`;
         const res = await fetch(url);
-        const data = await res.json();
+        const data = await res.json() as { ok: boolean; result?: { username: string }; description?: string };
         if (data.ok) {
-            logger.info(`🤖 Telegram Bot connected: @${data.result.username}`);
+            logger.info(`🤖 Telegram Bot connected: @${data.result?.username}`);
             return true;
         }
         logger.warn(`🤖 Telegram Bot token invalid: ${data.description}`);

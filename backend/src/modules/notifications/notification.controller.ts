@@ -46,7 +46,7 @@ export class NotificationController {
     // PUT /notifications/:id/read — Mark single as read
     async markAsRead(req: Request, res: Response, next: NextFunction) {
         try {
-            const data = await notificationService.markAsRead(req.params.id, req.user!.id);
+            const data = await notificationService.markAsRead(req.params['id'] as string, req.user!.id);
             res.json(successResponse(data, 'Marked as read'));
         } catch (e) { next(e); }
     }
@@ -62,7 +62,7 @@ export class NotificationController {
     // DELETE /notifications/:id — Delete notification
     async delete(req: Request, res: Response, next: NextFunction) {
         try {
-            await notificationService.delete(req.params.id, req.user!.id);
+            await notificationService.delete(req.params['id'] as string, req.user!.id);
             res.json(successResponse(null, 'Notification deleted'));
         } catch (e) { next(e); }
     }

@@ -2,20 +2,23 @@
 
 **CampusOps** is a modern, distributed campus management platform for UEMF. It handles planning, attendance, payments, and academic progress tracking in one unified system.
 
-## 🌟 Features
-- **Role-Based Access**: Specialized interfaces for Admin, Scolarité, Enseignants, and Etudiants.
-- **Academic Management**: Branch, Module, and Group hierarchy.
-- **Planning & Attendance**: Scheduling and tracking daily absences and lateness.
-- **Progress Tracking**: Real-time course completion tracking (%).
-- **Financial Module**: Inscriptions and monthly payment alerts.
-- **Integrations**: Telegram Bot for quick queries, Email notifications, and OpenClaw workflows.
+## Features
+- **Role-Based Access**: Specialized views for Admin, Scolarité, Enseignants, and Etudiants
+- **Academic Management**: Branch, Module, and Group hierarchy
+- **Planning & Attendance**: Scheduling and bulk absence tracking
+- **Progress Tracking**: Real-time course completion % per group/module
+- **Financial Module**: Payment tracking with overdue alerts
+- **Telegram Bot**: `/today`, `/week`, `/absence`, `/progress` commands via OTP account linking
+- **Email Notifications**: SMTP broadcasts + scheduled daily schedule digests
+- **Cron Jobs**: 07:00 daily schedule digest, 09:00 overdue payment alerts
 
-## 🛠 Tech Stack
-- **Backend**: Node.js, Express, TypeScript, Zod
+## Tech Stack
+- **Backend**: Node.js 20, Express, TypeScript, Zod
 - **Database**: PostgreSQL 16 via Prisma ORM
-- **Cache / Queues**: Redis 7
-- **Frontend** *(coming soon)*: React, Vite, TypeScript
+- **Cache**: Redis 7
+- **Frontend**: React (CDN), role-based SPA
 - **Infrastructure**: Docker Compose
+- **CI/CD**: GitHub Actions (typecheck → unit tests → integration tests)
 
 ---
 
@@ -127,4 +130,51 @@ CampusOps-/
 
 ---
 
-> 🤝 **Before writing any code, read `CONTRIBUTING.md`!** It explains our Git branching workflow and phase assignments.
+---
+
+## Running Tests
+
+```bash
+# Unit tests (no DB required — runs in < 10s)
+npm test
+
+# Integration tests (requires Docker DB running)
+npm run test:integration
+```
+
+Unit tests cover: JWT signing/verification, bcrypt hashing, and RBAC middleware.
+Integration tests cover: full auth flow (register → login → refresh → logout → RBAC).
+
+---
+
+## Cloud Deployment (Phase 8)
+
+### Option A — Railway (recommended, one-click)
+
+1. **Database** → Create a Railway project → Add PostgreSQL plugin → copy `DATABASE_URL`
+2. **Redis** → Add Redis plugin → copy `REDIS_URL`
+3. **API** → New Service → GitHub Repo → set root directory to `backend/` → add all env vars from `.env.production.example`
+4. Railway auto-deploys on every push to `main`
+
+### Option B — Render + Supabase
+
+1. **Database**: Create a Supabase project → Project Settings → Database → copy URI connection string
+2. **API**: Render → New Web Service → connect GitHub → set root dir `backend/` → Build: `npm ci && npx prisma generate && npm run build` → Start: `npx prisma migrate deploy && node dist/index.js`
+3. Set env vars in Render dashboard
+
+### Frontend Deployment (Vercel)
+
+1. Vercel → New Project → import repo → set root directory to `CompusOS_Frontend/`
+2. No build step needed (CDN-based React)
+3. Set `CORS_ORIGIN` in the backend to your Vercel URL
+
+### Telegram Webhook Registration
+
+After your API is deployed, register the webhook once:
+```bash
+curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://your-api.railway.app/api/telegram/webhook&secret_token=<YOUR_WEBHOOK_SECRET>"
+```
+
+---
+
+> **Before writing code:** read `CONTRIBUTING.md` for our Git branching workflow and phase assignments.

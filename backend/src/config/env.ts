@@ -53,6 +53,14 @@ const envSchema = z.object({
 
     // Notifications — Telegram
     TELEGRAM_BOT_TOKEN: z.string().optional(),
+    TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
+
+    // Integrations — IMAP (email inbox reading)
+    IMAP_HOST: z.string().optional(),
+    IMAP_PORT: z.coerce.number().optional().default(993),
+    IMAP_USER: z.string().optional(),
+    IMAP_PASS: z.string().optional(),
+    IMAP_TLS: z.string().optional().transform(v => v !== 'false'),
 });
 
 // Parse and validate — will throw if invalid
