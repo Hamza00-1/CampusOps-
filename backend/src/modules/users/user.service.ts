@@ -3,6 +3,8 @@ import { ApiError } from '../../middleware/errorHandler';
 import { hashPassword } from '../../utils/hash';
 import { CreateUserInput, UpdateUserInput, UserQuery } from './user.schemas';
 import { Prisma } from '@prisma/client';
+import { sendEmail } from '../../services/email.service';
+import { logger } from '../../middleware/logger';
 
 export class UserService {
     private readonly selectFields = {
@@ -57,10 +59,22 @@ export class UserService {
         if (!branch) throw ApiError.badRequest('Invalid branch ID');
 
         const passwordHash = await hashPassword(data.password);
-        return prisma.user.create({
+        const user = await prisma.user.create({
             data: { name: data.name, email: data.email, passwordHash, role: data.role, branchId: data.branchId },
             select: this.selectFields,
         });
+
+        // Send invitation email (fire-and-forget — don't block user creation)
+        sendEmail({
+            to: data.email,
+            subject: `Welcome to CampusOps — Your account is ready!`,
+            body: `Hello ${data.name},\n\nYour CampusOps account has been created.\n\n📧 Email: ${data.email}\n🔑 Password: ${data.password}\n👤 Role: ${data.role}\n🏫 Branch: ${branch.name}\n\nPlease log in at: http://localhost:5000/CampusOps.html\n\nWe recommend changing your password after your first login.\n\nBest regards,\nCampusOps Administration`,
+            type: 'success',
+        }).then(ok => {
+            if (ok) logger.info(`📧 Invitation email sent to ${data.email}`);
+        }).catch(() => {});
+
+        return user;
     }
 
     async update(id: string, data: UpdateUserInput) {

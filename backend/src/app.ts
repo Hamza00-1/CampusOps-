@@ -22,6 +22,7 @@ import progressRoutes from './modules/progress/progress.routes';
 import paymentRoutes from './modules/payments/payment.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
 import gradeRoutes from './modules/grades/grade.routes';
+import telegramRoutes from './modules/telegram/telegram.routes';
 
 // ============================================
 // CampusOps — Express Application
@@ -108,6 +109,7 @@ app.use(`${env.API_PREFIX}/progress`, progressRoutes);
 app.use(`${env.API_PREFIX}/payments`, paymentRoutes);
 app.use(`${env.API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${env.API_PREFIX}/grades`, gradeRoutes);
+app.use(`${env.API_PREFIX}/telegram`, telegramRoutes);
 
 // API root
 app.get(env.API_PREFIX, (_req, res) => {

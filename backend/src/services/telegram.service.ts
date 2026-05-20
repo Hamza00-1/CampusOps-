@@ -1,6 +1,7 @@
 // ============================================
 // CampusOps — Telegram Bot Service
 // ============================================
+import https from 'https';
 import { env } from '../config/env';
 import { logger } from '../middleware/logger';
 
@@ -11,6 +12,35 @@ const TELEGRAM_API = 'https://api.telegram.org/bot';
  */
 export function isTelegramConfigured(): boolean {
     return !!env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_BOT_TOKEN !== 'your-telegram-bot-token';
+}
+
+/**
+ * Make an HTTPS POST request (more reliable than fetch in some Node versions).
+ */
+export function httpsPost(url: string, payload: object): Promise<any> {
+    return new Promise((resolve, reject) => {
+        const data = JSON.stringify(payload);
+        const parsed = new URL(url);
+        const options = {
+            hostname: parsed.hostname,
+            path: parsed.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data),
+            },
+        };
+        const req = https.request(options, (res) => {
+            let body = '';
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+                try { resolve(JSON.parse(body)); } catch { resolve({ ok: false, description: 'Invalid JSON response' }); }
+            });
+        });
+        req.on('error', reject);
+        req.write(data);
+        req.end();
+    });
 }
 
 /**
@@ -27,18 +57,12 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
 
     try {
         const url = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/sendMessage`;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text,
-                parse_mode: 'Markdown',
-                disable_web_page_preview: true,
-            }),
+        const data = await httpsPost(url, {
+            chat_id: chatId,
+            text,
+            parse_mode: 'Markdown',
+            disable_web_page_preview: true,
         });
-
-        const data = await res.json();
 
         if (!data.ok) {
             logger.error(`🤖 Telegram API error: ${data.description} (chatId=${chatId})`);
@@ -106,8 +130,7 @@ export async function verifyTelegramBot(): Promise<boolean> {
     if (!isTelegramConfigured()) return false;
     try {
         const url = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/getMe`;
-        const res = await fetch(url);
-        const data = await res.json();
+        const data = await httpsPost(url, {});
         if (data.ok) {
             logger.info(`🤖 Telegram Bot connected: @${data.result.username}`);
             return true;

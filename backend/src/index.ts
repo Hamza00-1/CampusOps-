@@ -3,6 +3,8 @@ import { env } from './config/env';
 import { logger } from './middleware/logger';
 import { prisma } from './config/database';
 import { connectRedis, disconnectRedis } from './config/redis';
+import { verifyEmailConnection } from './services/email.service';
+import { verifyTelegramBot } from './services/telegram.service';
 
 // ============================================
 // CampusOps — Server Entry Point
@@ -17,7 +19,13 @@ async function bootstrap(): Promise<void> {
         // 2. Connect to Redis (non-blocking — continues if unavailable)
         await connectRedis();
 
-        // 3. Start Express server
+        // 3. Verify SMTP Email connection
+        await verifyEmailConnection();
+
+        // 4. Verify Telegram Bot
+        await verifyTelegramBot();
+
+        // 4. Start Express server
         const server = app.listen(env.PORT, () => {
             logger.info(`
 ┌─────────────────────────────────────────────┐

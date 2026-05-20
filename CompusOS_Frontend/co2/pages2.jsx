@@ -358,28 +358,82 @@ function Users({ toast }){
     setInviting(true);
   };
 
-  const saveInvite = () => {
+  const refreshUsersList = async () => {
+    try {
+      const res = await window.api.request('/users?limit=200');
+      if (res && res.data) {
+        window.USERS_LIST = res.data.map(x => ({
+          id: x.id, name: x.name, role: (x.role || '').toLowerCase(),
+          email: x.email, branch: x.branch?.name || '—', status: 'active',
+          init: x.name?.substring(0,2).toUpperCase() || '??', color: '#5FA83C',
+        }));
+        const studs = res.data.filter(x => x.role === 'Etudiant');
+        if (studs.length) {
+          window.STUDENTS = studs.map(s => ({
+            id: s.id, name: s.name, group: s.group?.name || '—',
+            avg: 14, att: 90, status: 'active',
+            init: s.name?.substring(0,2).toUpperCase() || '??', color: '#7CB342',
+          }));
+        }
+        force(x => x + 1);
+      }
+    } catch (err) {
+      console.error("Failed to refresh users list", err);
+    }
+  };
+
+  const saveInvite = async () => {
     if (!inviteForm.name.trim() || !inviteForm.email.trim()) {
       toast({ type:'error', title:'Name and email are required' }); return;
     }
     if (!/\S+@\S+\.\S+/.test(inviteForm.email)) {
       toast({ type:'error', title:'Invalid email address' }); return;
     }
-    const colors = ['#5FA83C','#7C3AED','#F59E0B','#0891B2','#DC2626','#7CB342','#DB2777'];
-    const newUser = {
-      id: 'U-'+String(USERS_LIST.length+1).padStart(3,'0'),
-      name: inviteForm.name,
-      email: inviteForm.email,
-      role: inviteForm.role,
-      branch: inviteForm.branch,
-      status: inviteForm.status,
-      init: inviteForm.name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase(),
-      color: colors[USERS_LIST.length % colors.length],
+    
+    // Resolve branch UUID — fetch from API since local BRANCHES may lack UUID ids
+    let branchId = null;
+    try {
+      const brRes = await window.api.request('/branches');
+      const apiBranches = brRes.data || [];
+      const match = apiBranches.find(b => b.name === inviteForm.branch) || apiBranches[0];
+      branchId = match?.id;
+    } catch (e) {
+      console.error('Failed to fetch branches', e);
+    }
+    if (!branchId) {
+      toast({ type:'error', title:'No branch available — check backend connection' }); return;
+    }
+    
+    // Create mapping for roles to match backend enum
+    const roleMap = {
+      'admin': 'Admin',
+      'scolarite': 'Scolarite',
+      'enseignant': 'Enseignant',
+      'etudiant': 'Etudiant'
     };
-    USERS_LIST.push(newUser);
-    toast({ type:'success', title:'Invitation sent', desc: `${inviteForm.email} will receive a sign-up link.` });
-    setInviting(false);
-    force(x=>x+1);
+    const apiRole = roleMap[inviteForm.role] || 'Etudiant';
+    
+    // Generate a secure temporary password satisfying z.string().min(8).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/).regex(/[!@#$%^&*(),.?":{}|<>]/)
+    const tempPassword = 'CampusOps' + Math.floor(100 + Math.random() * 900) + '!';
+
+    try {
+      await window.api.request('/users', {
+        method: 'POST',
+        body: {
+          name: inviteForm.name,
+          email: inviteForm.email,
+          password: tempPassword,
+          role: apiRole,
+          branchId: branchId
+        }
+      });
+      
+      toast({ type:'success', title:'Invitation sent', desc: `${inviteForm.email} created with password: ${tempPassword}. Welcome email dispatched.` });
+      setInviting(false);
+      await refreshUsersList();
+    } catch (err) {
+      toast({ type:'error', title:'Failed to send invitation', desc: err.message });
+    }
   };
 
   const openEditU = (u) => {
@@ -387,25 +441,59 @@ function Users({ toast }){
     setEditingU(u);
   };
 
-  const saveEditU = () => {
+  const saveEditU = async () => {
     if (!editForm.name.trim() || !editForm.email.trim()) {
       toast({ type:'error', title:'Name and email are required' }); return;
     }
-    const idx = USERS_LIST.findIndex(x => x.id === editingU.id);
-    if (idx >= 0) {
-      USERS_LIST[idx] = { ...USERS_LIST[idx], ...editForm, init: editForm.name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase() };
+    let branchId = null;
+    try {
+      const brRes = await window.api.request('/branches');
+      const apiBranches = brRes.data || [];
+      const match = apiBranches.find(b => b.name === editForm.branch) || apiBranches[0];
+      branchId = match?.id;
+    } catch (e) {
+      console.error('Failed to fetch branches', e);
     }
-    toast({ type:'success', title:'User updated', desc: editForm.name + ' saved.' });
-    setEditingU(null);
-    force(x=>x+1);
+
+    const roleMap = {
+      'admin': 'Admin',
+      'scolarite': 'Scolarite',
+      'enseignant': 'Enseignant',
+      'etudiant': 'Etudiant'
+    };
+    const apiRole = roleMap[editForm.role] || 'Etudiant';
+
+    try {
+      await window.api.request(`/users/${editingU.id}`, {
+        method: 'PUT',
+        body: {
+          name: editForm.name,
+          email: editForm.email,
+          role: apiRole,
+          branchId: branchId
+        }
+      });
+      
+      toast({ type:'success', title:'User updated', desc: editForm.name + ' saved.' });
+      setEditingU(null);
+      await refreshUsersList();
+    } catch (err) {
+      toast({ type:'error', title:'Failed to update user', desc: err.message });
+    }
   };
 
-  const deleteUser = (u) => {
-    const idx = USERS_LIST.findIndex(x => x.id === u.id);
-    if (idx >= 0) USERS_LIST.splice(idx, 1);
-    toast({ type:'success', title:'User deleted', desc: u.name + ' has been removed.' });
-    setEditingU(null);
-    force(x=>x+1);
+  const deleteUser = async (u) => {
+    if (!confirm(`Are you sure you want to remove ${u.name}?`)) return;
+    try {
+      await window.api.request(`/users/${u.id}`, {
+        method: 'DELETE'
+      });
+      toast({ type:'success', title:'User deleted', desc: u.name + ' has been removed.' });
+      setEditingU(null);
+      await refreshUsersList();
+    } catch (err) {
+      toast({ type:'error', title:'Failed to delete user', desc: err.message });
+    }
   };
 
   return (
