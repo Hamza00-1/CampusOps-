@@ -51,8 +51,23 @@ const envSchema = z.object({
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().optional().default('CampusOps <noreply@campusops.ma>'),
 
+    // Inbox — IMAP (optional; defaults align with SMTP_USER if omitted)
+    IMAP_HOST: z.string().optional(),
+    IMAP_PORT: z.coerce.number().optional().default(993),
+    IMAP_SECURE: z.string().optional().transform(v => v !== 'false'),
+    IMAP_USER: z.string().optional(),
+    IMAP_PASS: z.string().optional(),
+
     // Notifications — Telegram
     TELEGRAM_BOT_TOKEN: z.string().optional(),
+
+    // OpenClaw webhook signing (HMAC shared secret)
+    OPENCLAW_WEBHOOK_SECRET: z.string().optional(),
+
+    // Daily planning cron — disable in tests
+    CRON_DAILY_PLANNING: z.enum(['on', 'off']).default('on'),
+    CRON_DAILY_PLANNING_TIME: z.string().default('0 7 * * *'),
+    CRON_TIMEZONE: z.string().default('Africa/Casablanca'),
 });
 
 // Parse and validate — will throw if invalid

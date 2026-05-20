@@ -5,6 +5,8 @@ import { prisma } from './config/database';
 import { connectRedis, disconnectRedis } from './config/redis';
 import { verifyEmailConnection } from './services/email.service';
 import { verifyTelegramBot } from './services/telegram.service';
+import { verifyImapConnection } from './integrations/email/imap';
+import { startCronJobs, stopCronJobs } from './integrations/openclaw/cron';
 
 // ============================================
 // CampusOps — Server Entry Point
@@ -25,7 +27,13 @@ async function bootstrap(): Promise<void> {
         // 4. Verify Telegram Bot
         await verifyTelegramBot();
 
-        // 4. Start Express server
+        // 5. Verify IMAP inbox (optional)
+        await verifyImapConnection();
+
+        // 6. Schedule cron jobs (daily 7AM planning notifications)
+        startCronJobs();
+
+        // 7. Start Express server
         const server = app.listen(env.PORT, () => {
             logger.info(`
 ┌─────────────────────────────────────────────┐
@@ -45,6 +53,8 @@ async function bootstrap(): Promise<void> {
         // ===== Graceful Shutdown =====
         const shutdown = async (signal: string) => {
             logger.info(`\n${signal} received. Shutting down gracefully...`);
+
+            stopCronJobs();
 
             server.close(() => {
                 logger.info('🔒 HTTP server closed');

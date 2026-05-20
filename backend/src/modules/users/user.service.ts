@@ -5,6 +5,7 @@ import { CreateUserInput, UpdateUserInput, UserQuery } from './user.schemas';
 import { Prisma } from '@prisma/client';
 import { sendEmail } from '../../services/email.service';
 import { logger } from '../../middleware/logger';
+import { env } from '../../config/env';
 
 export class UserService {
     private readonly selectFields = {
@@ -65,10 +66,11 @@ export class UserService {
         });
 
         // Send invitation email (fire-and-forget — don't block user creation)
+        const loginUrl = env.APP_URL?.endsWith('.html') ? env.APP_URL : `${env.APP_URL}/CampusOps.html`;
         sendEmail({
             to: data.email,
             subject: `Welcome to CampusOps — Your account is ready!`,
-            body: `Hello ${data.name},\n\nYour CampusOps account has been created.\n\n📧 Email: ${data.email}\n🔑 Password: ${data.password}\n👤 Role: ${data.role}\n🏫 Branch: ${branch.name}\n\nPlease log in at: http://localhost:5000/CampusOps.html\n\nWe recommend changing your password after your first login.\n\nBest regards,\nCampusOps Administration`,
+            body: `Hello ${data.name},\n\nYour CampusOps account has been created.\n\n📧 Email: ${data.email}\n🔑 Password: ${data.password}\n👤 Role: ${data.role}\n🏫 Branch: ${branch.name}\n\nPlease log in at: ${loginUrl}\n\nWe recommend changing your password after your first login.\n\nBest regards,\nCampusOps Administration`,
             type: 'success',
         }).then(ok => {
             if (ok) logger.info(`📧 Invitation email sent to ${data.email}`);

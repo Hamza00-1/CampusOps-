@@ -362,19 +362,19 @@ function Users({ toast }){
     try {
       const res = await window.api.request('/users?limit=200');
       if (res && res.data) {
-        window.USERS_LIST = res.data.map(x => ({
+        const replace = (arr, items) => { if (Array.isArray(arr)) arr.splice(0, arr.length, ...items); };
+        replace(window.USERS_LIST, res.data.map(x => ({
           id: x.id, name: x.name, role: (x.role || '').toLowerCase(),
           email: x.email, branch: x.branch?.name || '—', status: 'active',
           init: x.name?.substring(0,2).toUpperCase() || '??', color: '#5FA83C',
-        }));
+        })));
         const studs = res.data.filter(x => x.role === 'Etudiant');
-        if (studs.length) {
-          window.STUDENTS = studs.map(s => ({
-            id: s.id, name: s.name, group: s.group?.name || '—',
-            avg: 14, att: 90, status: 'active',
-            init: s.name?.substring(0,2).toUpperCase() || '??', color: '#7CB342',
-          }));
-        }
+        // Always replace — empty list is meaningful info
+        replace(window.STUDENTS, studs.map(s => ({
+          id: s.id, name: s.name, group: s.group?.name || '—',
+          avg: 14, att: 90, status: 'active',
+          init: s.name?.substring(0,2).toUpperCase() || '??', color: '#7CB342',
+        })));
         force(x => x + 1);
       }
     } catch (err) {

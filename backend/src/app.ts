@@ -23,6 +23,8 @@ import paymentRoutes from './modules/payments/payment.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
 import gradeRoutes from './modules/grades/grade.routes';
 import telegramRoutes from './modules/telegram/telegram.routes';
+import mailRoutes from './modules/mail/mail.routes';
+import openclawRoutes from './integrations/openclaw/openclaw.routes';
 
 // ============================================
 // CampusOps — Express Application
@@ -35,9 +37,10 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS
+// CORS — supports a comma-separated list in CORS_ORIGIN
+const corsOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean);
 app.use(cors({
-    origin: env.CORS_ORIGIN,
+    origin: corsOrigins.length > 1 ? corsOrigins : corsOrigins[0],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -71,7 +74,7 @@ app.use(globalLimiter);
 // Strict rate limiter for auth endpoints (prevent brute force)
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 15,                   // 15 attempts per window
+    max: env.NODE_ENV === 'production' ? 15 : 200, // generous in dev — frontend role-switcher triggers many logins
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -110,6 +113,8 @@ app.use(`${env.API_PREFIX}/payments`, paymentRoutes);
 app.use(`${env.API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${env.API_PREFIX}/grades`, gradeRoutes);
 app.use(`${env.API_PREFIX}/telegram`, telegramRoutes);
+app.use(`${env.API_PREFIX}/mail`, mailRoutes);
+app.use(`${env.API_PREFIX}/openclaw`, openclawRoutes);
 
 // API root
 app.get(env.API_PREFIX, (_req, res) => {
@@ -121,7 +126,7 @@ app.get(env.API_PREFIX, (_req, res) => {
         modules: [
             'auth', 'users', 'branches', 'modules', 'groups',
             'planning', 'absences', 'progress', 'payments',
-            'notifications', 'grades',
+            'notifications', 'grades', 'telegram', 'mail', 'openclaw',
         ],
     }, 'Welcome to CampusOps API — All modules active'));
 });

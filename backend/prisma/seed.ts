@@ -152,6 +152,33 @@ async function main() {
     data: { name: 'Etudiant Demo', email: 'student@campusops.ma', passwordHash: studentPw, role: Role.Etudiant, branchId: branch.id },
   });
 
+  // ── 2b. REAL EIDIA users (from roles.xlsx) ──
+  // Default password for all real accounts: CampusOps@2026 (users should change after first login)
+  console.log('🎓 Creating real EIDIA accounts from roles.xlsx...');
+  const realPw = await hash('CampusOps@2026');
+  const realUsers: Array<{ name: string; email: string; phone: string; role: Role }> = [
+    { name: 'Hamza Khchinich',   email: 'hamza.khchichine@eidia.ueuromed.org', phone: '+212660609941', role: Role.Admin },
+    { name: 'Karima Ed Dahhak',  email: 'karima.eddahhak@eidia.ueuromed.org',  phone: '+212771493177', role: Role.Scolarite },
+    { name: 'Imad Adnane',       email: 'imad.adnane@eidia.ueuromed.org',      phone: '+212611526620', role: Role.Enseignant },
+    { name: 'Siham Lyzoul',      email: 'siham.lyzoul@eidia.ueuromed.org',     phone: '+212620407095', role: Role.Etudiant },
+    { name: 'Brahim Nakkar',     email: 'brahim.nakkar@eidia.ueuromed.org',    phone: '+212659756354', role: Role.Etudiant },
+  ];
+  const realCreated: Record<string, { id: string; role: Role }> = {};
+  for (const u of realUsers) {
+    const created = await prisma.user.create({
+      data: {
+        name: u.name,
+        email: u.email,
+        passwordHash: realPw,
+        role: u.role,
+        whatsappNumber: u.phone,
+        branchId: branch.id,
+      },
+    });
+    realCreated[u.email] = { id: created.id, role: u.role };
+  }
+  console.log(`   → ${realUsers.length} real EIDIA accounts created (password: CampusOps@2026)`);
+
   // ── 3. Teachers (5) ──
   console.log('👩‍🏫 Creating 5 field teachers...');
   const teachers: Record<string, { id: string }> = {};
@@ -218,6 +245,16 @@ async function main() {
   const csG1 = groups['CS'][0];
   await prisma.groupStudent.create({ data: { groupId: csG1.id, studentId: demoStudent.id } });
   groupStudentIds[csG1.id].push(demoStudent.id);
+
+  // Enroll real EIDIA students (siham, brahim) into CS-G1 too
+  for (const u of realUsers) {
+    if (u.role === Role.Etudiant) {
+      const r = realCreated[u.email];
+      await prisma.groupStudent.create({ data: { groupId: csG1.id, studentId: r.id } });
+      groupStudentIds[csG1.id].push(r.id);
+      allStudentIds.push(r.id);
+    }
+  }
 
   console.log(`   → ${nameIdx} students enrolled`);
 
@@ -343,6 +380,8 @@ async function main() {
   console.log(`   Modules: ${totalMods} | Sessions: ${allSessions.length + 2} | Absences: ${absCount}`);
   console.log(`   Payments: ${allStudentIds.length * 2 + 2} | Notifications: 5`);
   console.log('\n   Demo accounts: admin/scolarite/prof/student @campusops.ma');
+  console.log('   Real EIDIA accounts (password: CampusOps@2026):');
+  for (const u of realUsers) console.log(`     • ${u.email.padEnd(46)} [${u.role}]`);
 }
 
 main()

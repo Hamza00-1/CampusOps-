@@ -60,7 +60,7 @@ services:
       API_PREFIX: /api
       DATABASE_URL: postgresql://campusops:campusops_secret@db:5432/campusops_db?schema=public
       REDIS_URL: redis://redis:6379
-      CORS_ORIGIN: http://localhost:5173
+      CORS_ORIGIN: http://localhost:5173,http://127.0.0.1:5173
       LOG_LEVEL: debug
       # JWT secrets and other sensitive vars must be set in backend/.env
       # Copy backend/.env.example to backend/.env and fill in your own secrets

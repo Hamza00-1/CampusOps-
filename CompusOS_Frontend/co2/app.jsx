@@ -66,57 +66,62 @@ function App() {
           window.api.request('/planning'),
         ]);
 
+        // Mutate the shared arrays in place — pages hold a reference to the original
+        // array exported from data.js, so reassigning `window.X = newArray` would leave
+        // them looking at stale data. `.splice(0, len, ...new)` swaps contents in place.
+        const replace = (arr, items) => { if (Array.isArray(arr)) arr.splice(0, arr.length, ...items); };
+
         if (md.status==='fulfilled' && md.value.data?.length) {
           window._rawModules = md.value.data;
-          window.MODULES = md.value.data.map(m => ({
+          replace(window.MODULES, md.value.data.map(m => ({
             id: m.id, code: m.code || m.id?.substring(0,6) || '???',
             name: m.name, credits: m.credits || 4,
             teacher: m.teacher?.name || '—', color: '#5FA83C',
-          }));
+          })));
         }
         if (gp.status==='fulfilled' && gp.value.data?.length) {
           window._rawGroups = gp.value.data;
-          window.GROUPS_LIST = gp.value.data.map(g => ({
+          replace(window.GROUPS_LIST, gp.value.data.map(g => ({
             id: g.id, name: g.name, branch: g.branch?.name || '—',
             students: g._count?.students || 0, year: g.academicYear || '2024-25',
-          }));
+          })));
         }
         if (br.status==='fulfilled' && br.value.data?.length) {
-          window.BRANCHES = br.value.data.map(b => ({
+          replace(window.BRANCHES, br.value.data.map(b => ({
             id: b.id, code: b.code || b.id?.substring(0,4) || '??',
             name: b.name, head: '—',
             students: b._count?.users || 0, groups: b._count?.groups || 0, color: '#5FA83C',
-          }));
+          })));
         }
         if (us.status==='fulfilled' && us.value.data?.length) {
-          window.USERS_LIST = us.value.data.map(x => ({
+          replace(window.USERS_LIST, us.value.data.map(x => ({
             id: x.id, name: x.name, role: (x.role || '').toLowerCase(),
             email: x.email, branch: x.branch?.name || '—', status: 'active',
             init: x.name?.substring(0,2).toUpperCase() || '??', color: '#5FA83C',
-          }));
+          })));
           const studs = us.value.data.filter(x => x.role === 'Etudiant');
-          if (studs.length) {
-            window.STUDENTS = studs.map(s => ({
-              id: s.id, name: s.name, group: s.group?.name || '—',
-              avg: 14, att: 90, status: 'active',
-              init: s.name?.substring(0,2).toUpperCase() || '??', color: '#7CB342',
-            }));
-          }
+          // Always replace — if there are no students from the API, the page should
+          // reflect that (empty list) instead of showing the seeded mock data.
+          replace(window.STUDENTS, studs.map(s => ({
+            id: s.id, name: s.name, group: s.group?.name || '—',
+            avg: 14, att: 90, status: 'active',
+            init: s.name?.substring(0,2).toUpperCase() || '??', color: '#7CB342',
+          })));
         }
         if (py.status==='fulfilled' && py.value.data?.length) {
-          window.PAYMENTS = py.value.data.map(p => ({
+          replace(window.PAYMENTS, py.value.data.map(p => ({
             id: p.id, student: p.student?.name || '—', group: p.student?.group?.name || '—',
             type: p.planType || 'Tuition', amount: parseFloat(p.amount) || 0,
             status: (p.status || 'pending').toLowerCase(),
             date: new Date(p.dueDate).toLocaleDateString(), method: '—',
-          }));
+          })));
         }
         if (nt.status==='fulfilled' && nt.value.data?.length) {
-          window.NOTIFICATIONS = nt.value.data.map(n => ({
+          replace(window.NOTIFICATIONS, nt.value.data.map(n => ({
             id: n.id, type: n.type?.toLowerCase() || 'info',
             title: n.title, desc: n.content,
             time: new Date(n.createdAt).toLocaleDateString(), read: n.isRead,
-          }));
+          })));
         }
         if (pl.status==='fulfilled' && pl.value.data?.length) {
           window.SESSIONS = pl.value.data.map(s => {

@@ -28,6 +28,60 @@ function StatCard({ icon, color, label, value, trend, trendDir }) {
 }
 
 function DashAdmin({ t, onNav }) {
+  const [stats, setStats] = uSP({ students:'—', groups:'—', branches:'—', faculty:'—' });
+  const [branchRows, setBranchRows] = uSP([]);
+  const [activity, setActivity] = uSP([]);
+  const [err, setErr] = uSP(null);
+
+  uEP(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const [u, b, g, n] = await Promise.all([
+          window.api.request('/users?limit=200'),
+          window.api.request('/branches'),
+          window.api.request('/groups'),
+          window.api.request('/notifications'),
+        ]);
+        if (ignore) return;
+        const users   = u?.data || [];
+        const brs     = b?.data || [];
+        const groups  = g?.data || [];
+        const notifs  = n?.data || [];
+
+        const studentCount = users.filter(x => x.role === 'Etudiant').length;
+        const facultyCount = users.filter(x => x.role === 'Enseignant').length;
+        setStats({
+          students: studentCount,
+          groups: groups.length,
+          branches: brs.length,
+          faculty: facultyCount,
+        });
+
+        // Per-branch summary — derive head + counts from the live data
+        const palette = ['#5FA83C','#7C3AED','#F59E0B','#0891B2','#DC2626','#10B981'];
+        setBranchRows(brs.map((br, i) => {
+          const inBranch = users.filter(x => x.branchId === br.id);
+          const head = inBranch.find(x => x.role === 'Admin') || inBranch.find(x => x.role === 'Scolarite');
+          return {
+            code: br.name,
+            name: br.name,
+            head: head ? head.name : '—',
+            students: inBranch.filter(x => x.role === 'Etudiant').length,
+            groups: groups.filter(gg => gg.branchId === br.id).length,
+            color: palette[i % palette.length],
+          };
+        }));
+
+        setActivity(notifs.slice(0, 5));
+      } catch (e) {
+        console.error('Dashboard load failed', e);
+        if (!ignore) setErr(e?.message || 'Failed to load dashboard');
+      }
+    })();
+    return () => { ignore = true; };
+  }, []);
+
   return (
     <>
       <div className="page-head">
@@ -36,11 +90,12 @@ function DashAdmin({ t, onNav }) {
           <div className="sub">System overview — {ROLES.admin.name}</div>
         </div>
       </div>
+      {err && <div className="card" style={{padding:12,marginBottom:14,color:'var(--red)',background:'var(--red)10'}}>Failed to load live data: {err}</div>}
       <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard icon="users"    color="#5FA83C" label="Total students"   value="577"    trend="+12 this week" trendDir="up" />
-        <StatCard icon="groups"   color="#7C3AED" label="Active groups"    value="24"     trend="+1"            trendDir="up" />
-        <StatCard icon="branches" color="#F59E0B" label="Branches"         value="4"      trend="stable"        trendDir="flat" />
-        <StatCard icon="users"    color="#0891B2" label="Faculty"          value="78"     trend="+3"            trendDir="up" />
+        <StatCard icon="users"    color="#5FA83C" label="Total students" value={stats.students} />
+        <StatCard icon="groups"   color="#7C3AED" label="Active groups"  value={stats.groups} />
+        <StatCard icon="branches" color="#F59E0B" label="Branches"       value={stats.branches} />
+        <StatCard icon="users"    color="#0891B2" label="Faculty"        value={stats.faculty} />
       </div>
       <div className="grid-2-1" style={{marginBottom:14}}>
         <div className="card">
@@ -51,9 +106,12 @@ function DashAdmin({ t, onNav }) {
           <table className="tbl">
             <thead><tr><th>Branch</th><th>Head</th><th>Students</th><th>Groups</th></tr></thead>
             <tbody>
-              {BRANCHES.map(b => (
+              {branchRows.length === 0 && (
+                <tr><td colSpan="4" style={{textAlign:'center',color:'var(--text-3)',padding:'18px 0'}}>No branches yet</td></tr>
+              )}
+              {branchRows.map(b => (
                 <tr key={b.code}>
-                  <td><div style={{display:'flex',alignItems:'center',gap:10}}><span className="av av-xs" style={{background:b.color}}>{b.code.slice(0,2)}</span><strong>{b.name}</strong></div></td>
+                  <td><div style={{display:'flex',alignItems:'center',gap:10}}><span className="av av-xs" style={{background:b.color}}>{b.code.slice(0,2).toUpperCase()}</span><strong>{b.name}</strong></div></td>
                   <td>{b.head}</td>
                   <td className="mono">{b.students}</td>
                   <td className="mono">{b.groups}</td>
@@ -64,12 +122,15 @@ function DashAdmin({ t, onNav }) {
         </div>
         <div className="card">
           <div className="card-head"><h3>Recent activity</h3></div>
-          {NOTIFICATIONS.slice(0,5).map(n => (
+          {activity.length === 0 && (
+            <div style={{padding:'14px 0',color:'var(--text-3)',fontSize:13}}>No recent notifications.</div>
+          )}
+          {activity.map(n => (
             <div key={n.id} style={{display:'flex',gap:10,padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
               <span style={{width:6,height:6,borderRadius:'50%',background:n.type==='alert'?'var(--red)':n.type==='success'?'var(--green)':'var(--accent)',marginTop:6,flexShrink:0}}></span>
               <div style={{minWidth:0,flex:1}}>
                 <div style={{fontSize:13,fontWeight:600}}>{n.title}</div>
-                <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>{n.time}</div>
+                <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>{n.content || ''}</div>
               </div>
             </div>
           ))}
