@@ -1,9 +1,9 @@
 // CampusOps — mock data (cleaned: no emojis, realistic numbers)
 const ROLES = {
-  admin:      { id:'admin',      label:'Administrator', name:'Dr. Amira Saadi',     email:'a.saadi@campus.edu',    color:'#5FA83C' },
-  scolarite:  { id:'scolarite',  label:'Scolarité',     name:'Khalid El Amrani',    email:'k.elamrani@campus.edu', color:'#7C3AED' },
-  enseignant: { id:'enseignant', label:'Enseignant',    name:'Prof. Leïla Bennani', email:'l.bennani@campus.edu', color:'#7CB342', field:'Computer Science — Algorithms & Data Structures' },
-  etudiant:   { id:'etudiant',   label:'Étudiant',      name:'Yassine Idrissi',     email:'y.idrissi@campus.edu',  color:'#F59E0B', group:'L3-INFO-A' },
+  admin:      { id:'admin',      label:'Administrator', name:'Hamza Khchinich',     email:'hamza.khchichine@eidia.ueuromed.org',    color:'#5FA83C' },
+  scolarite:  { id:'scolarite',  label:'Scolarité',     name:'Karima Ed Dahhak',    email:'karima.eddahhak@eidia.ueuromed.org', color:'#7C3AED' },
+  enseignant: { id:'enseignant', label:'Enseignant',    name:'Imad Adnane', email:'imad.adnane@eidia.ueuromed.org', color:'#7CB342', field:'CS & Cyber Security' },
+  etudiant:   { id:'etudiant',   label:'Étudiant',      name:'Siham Lyzoul',     email:'siham.lyzoul@eidia.ueuromed.org',  color:'#F59E0B', group:'CS-G1' },
 };
 
 // Lucide-style stroke icons (kept as svg paths; no emoji)
@@ -61,124 +61,86 @@ const NAV_GROUPS = [
 ];
 
 const MODULES = [
-  { code:'CS301', name:'Algorithms & Data Structures', color:'#5FA83C', teacher:'Prof. L. Bennani' },
-  { code:'MA205', name:'Linear Algebra',               color:'#7CB342', teacher:'Prof. R. Taibi' },
-  { code:'PH210', name:'Quantum Physics',              color:'#7C3AED', teacher:'Prof. M. Chafiq' },
-  { code:'EN150', name:'Business English',             color:'#F59E0B', teacher:'Ms. J. Alaoui' },
-  { code:'CS420', name:'Distributed Systems',          color:'#DC2626', teacher:'Prof. O. Mansouri' },
-  { code:'DB310', name:'Database Systems',             color:'#0891B2', teacher:'Prof. S. Laghmari' },
+  { code:'S8-01', name:'Intro to AI',                          color:'#5FA83C', teacher:'Prof. Karim Mansouri' },
+  { code:'S8-02', name:'Distributed Applications',             color:'#7CB342', teacher:'Prof. Karim Mansouri' },
+  { code:'S8-03', name:'Lang & Comm 4',                        color:'#7C3AED', teacher:'Prof. Karim Mansouri' },
+  { code:'S8-04', name:'Digital Forensics & Incident Management', color:'#F59E0B', teacher:'Prof. Karim Mansouri' },
+  { code:'S8-05', name:'NoSQL Database Security',              color:'#DC2626', teacher:'Prof. Karim Mansouri' },
+  { code:'S8-06', name:'Blockchain Technology',                color:'#0891B2', teacher:'Prof. Karim Mansouri' },
+  { code:'S8-07', name:'DevSecOps',                            color:'#DB2777', teacher:'Prof. Karim Mansouri' },
 ];
 
 const GROUPS_LIST = [
-  { id:'L3-INFO-A', name:'L3 Info — Group A',  branch:'Computer Science', students:28, year:'2024-25' },
-  { id:'L3-INFO-B', name:'L3 Info — Group B',  branch:'Computer Science', students:26, year:'2024-25' },
-  { id:'M1-IA',     name:'M1 AI & Data',       branch:'Computer Science', students:22, year:'2024-25' },
-  { id:'L2-MATH',   name:'L2 Mathematics',     branch:'Mathematics',      students:31, year:'2024-25' },
-  { id:'L1-PHYS',   name:'L1 Physics',         branch:'Physics',          students:34, year:'2024-25' },
+  { id:'CS-G1', name:'CS-G1', branch:'EIDIA', students:2, year:'2025/2026' },
 ];
 
 const BRANCHES = [
-  { code:'CS',   name:'Computer Science',     head:'Prof. L. Bennani', students:168, groups:7, color:'#5FA83C', founded:2008, faculty:24, description:'Software engineering, algorithms, AI, distributed systems and data science.' },
-  { code:'MATH', name:'Mathematics',          head:'Prof. R. Taibi',   students:94,  groups:4, color:'#7CB342', founded:1995, faculty:14, description:'Pure and applied mathematics, statistics, numerical analysis.' },
-  { code:'PHYS', name:'Physics',              head:'Prof. M. Chafiq',  students:112, groups:5, color:'#7C3AED', founded:1995, faculty:18, description:'Classical mechanics, quantum physics, optics, condensed matter and lab work.' },
-  { code:'BUS',  name:'Business & Management',head:'Dr. F. Hakkaoui',  students:203, groups:8, color:'#F59E0B', founded:2002, faculty:22, description:'Management, finance, marketing, entrepreneurship and operations.' },
+  { code:'EIDIA', name:'EIDIA', head:'Hamza Khchinich', students:2, groups:1, color:'#5FA83C', founded:2020, faculty:1, description:'École d\'Ingénierie Digitale et d\'Intelligence Artificielle — CS & Cyber Security.' },
 ];
 
 const STUDENTS = [
-  { id:'S-2401', name:'Yassine Idrissi',   group:'L3-INFO-A', avg:15.8, att:96, status:'active',  init:'YI', color:'#5FA83C' },
-  { id:'S-2402', name:'Soukaina Bennis',   group:'L3-INFO-A', avg:17.2, att:98, status:'active',  init:'SB', color:'#7CB342' },
-  { id:'S-2403', name:'Omar Cherkaoui',    group:'L3-INFO-A', avg:12.4, att:78, status:'at-risk', init:'OC', color:'#DC2626' },
-  { id:'S-2404', name:'Nadia El Ouali',    group:'L3-INFO-B', avg:14.6, att:92, status:'active',  init:'NE', color:'#7C3AED' },
-  { id:'S-2405', name:'Mehdi Alami',       group:'L3-INFO-B', avg:10.1, att:64, status:'at-risk', init:'MA', color:'#F59E0B' },
-  { id:'S-2406', name:'Fatima Zahra',      group:'M1-IA',     avg:18.4, att:99, status:'active',  init:'FZ', color:'#0891B2' },
-  { id:'S-2407', name:'Hamza Tazi',        group:'M1-IA',     avg:13.9, att:85, status:'active',  init:'HT', color:'#059669' },
-  { id:'S-2408', name:'Imane Boukili',     group:'L2-MATH',   avg:15.1, att:91, status:'active',  init:'IB', color:'#DB2777' },
-  { id:'S-2409', name:'Zakaria Hmidi',     group:'L2-MATH',   avg:11.8, att:72, status:'at-risk', init:'ZH', color:'#EA580C' },
-  { id:'S-2410', name:'Salma Rachidi',     group:'L1-PHYS',   avg:16.3, att:94, status:'active',  init:'SR', color:'#5FA83C' },
-  { id:'S-2411', name:'Karim Nassiri',     group:'L1-PHYS',   avg:14.2, att:88, status:'active',  init:'KN', color:'#7C3AED' },
-  { id:'S-2412', name:'Lina Berrada',      group:'L3-INFO-A', avg:13.5, att:82, status:'active',  init:'LB', color:'#7CB342' },
+  { id:'S-01', name:'Siham Lyzoul',  group:'CS-G1', avg:15.4, att:94, status:'active', init:'SL', color:'#0891B2' },
+  { id:'S-02', name:'Brahim Nakkar', group:'CS-G1', avg:14.8, att:91, status:'active', init:'BN', color:'#DB2777' },
 ];
 
 const PAYMENTS = [
-  { id:'INV-24001', student:'Yassine Idrissi',  group:'L3-INFO-A', type:'Tuition Q2', amount:12500, status:'paid',    date:'Oct 08, 2024', method:'Bank transfer' },
-  { id:'INV-24002', student:'Soukaina Bennis',  group:'L3-INFO-A', type:'Tuition Q2', amount:12500, status:'paid',    date:'Oct 12, 2024', method:'Card' },
-  { id:'INV-24003', student:'Omar Cherkaoui',   group:'L3-INFO-A', type:'Tuition Q2', amount:12500, status:'overdue', date:'Oct 15, 2024', method:'—' },
-  { id:'INV-24004', student:'Nadia El Ouali',   group:'L3-INFO-B', type:'Tuition Q2', amount:12500, status:'partial', date:'Oct 20, 2024', method:'Bank transfer' },
-  { id:'INV-24005', student:'Mehdi Alami',      group:'L3-INFO-B', type:'Tuition Q2', amount:12500, status:'overdue', date:'Oct 15, 2024', method:'—' },
-  { id:'INV-24006', student:'Fatima Zahra',     group:'M1-IA',     type:'Tuition Q2', amount:14000, status:'paid',    date:'Oct 05, 2024', method:'Card' },
-  { id:'INV-24007', student:'Hamza Tazi',       group:'M1-IA',     type:'Tuition Q2', amount:14000, status:'pending', date:'Oct 22, 2024', method:'—' },
-  { id:'INV-24008', student:'Imane Boukili',    group:'L2-MATH',   type:'Lab fees',   amount:800,   status:'paid',    date:'Sep 30, 2024', method:'Cash' },
-  { id:'INV-24009', student:'Zakaria Hmidi',    group:'L2-MATH',   type:'Tuition Q2', amount:11000, status:'overdue', date:'Oct 15, 2024', method:'—' },
-  { id:'INV-24010', student:'Salma Rachidi',    group:'L1-PHYS',   type:'Tuition Q2', amount:11000, status:'paid',    date:'Oct 11, 2024', method:'Bank transfer' },
+  { id:'INV-001', student:'Siham Lyzoul',  group:'CS-G1', type:'Inscription', amount:45000, status:'paid',   date:'2025-04-15', method:'Card' },
+  { id:'INV-002', student:'Siham Lyzoul',  group:'CS-G1', type:'Mensualité',  amount:5000,  status:'unpaid', date:'2025-06-15', method:'—' },
+  { id:'INV-003', student:'Brahim Nakkar', group:'CS-G1', type:'Inscription', amount:45000, status:'paid',   date:'2025-04-15', method:'Bank transfer' },
+  { id:'INV-004', student:'Brahim Nakkar', group:'CS-G1', type:'Mensualité',  amount:5000,  status:'unpaid', date:'2025-06-15', method:'—' },
 ];
 
 const SESSIONS = [
-  { day:0, start:8,  dur:2,   mod:'CS301', grp:'L3-INFO-A', room:'B-204',     teacher:'Prof. L. Bennani' },
-  { day:0, start:10, dur:1.5, mod:'MA205', grp:'L2-MATH',   room:'A-110',     teacher:'Prof. R. Taibi' },
-  { day:0, start:14, dur:2,   mod:'DB310', grp:'L3-INFO-B', room:'B-207',     teacher:'Prof. S. Laghmari' },
-  { day:1, start:9,  dur:2,   mod:'PH210', grp:'L1-PHYS',   room:'C-12 (Lab)',teacher:'Prof. M. Chafiq' },
-  { day:1, start:13, dur:1.5, mod:'EN150', grp:'L3-INFO-A', room:'A-305',     teacher:'Ms. J. Alaoui' },
-  { day:1, start:15, dur:2,   mod:'CS420', grp:'M1-IA',     room:'B-301',     teacher:'Prof. O. Mansouri' },
-  { day:2, start:8,  dur:1.5, mod:'MA205', grp:'L2-MATH',   room:'A-110',     teacher:'Prof. R. Taibi' },
-  { day:2, start:10, dur:2,   mod:'CS301', grp:'L3-INFO-B', room:'B-204',     teacher:'Prof. L. Bennani' },
-  { day:2, start:14, dur:2,   mod:'DB310', grp:'M1-IA',     room:'B-207',     teacher:'Prof. S. Laghmari' },
-  { day:3, start:9,  dur:2,   mod:'CS420', grp:'M1-IA',     room:'B-301',     teacher:'Prof. O. Mansouri' },
-  { day:3, start:11, dur:1.5, mod:'EN150', grp:'L3-INFO-B', room:'A-305',     teacher:'Ms. J. Alaoui' },
-  { day:3, start:14, dur:2,   mod:'PH210', grp:'L1-PHYS',   room:'C-12 (Lab)',teacher:'Prof. M. Chafiq' },
-  { day:4, start:8,  dur:2,   mod:'CS301', grp:'L3-INFO-A', room:'B-204',     teacher:'Prof. L. Bennani' },
-  { day:4, start:10, dur:2,   mod:'MA205', grp:'L2-MATH',   room:'A-110',     teacher:'Prof. R. Taibi' },
-  { day:4, start:14, dur:1.5, mod:'EN150', grp:'M1-IA',     room:'A-305',     teacher:'Ms. J. Alaoui' },
-  { day:5, start:9,  dur:2,   mod:'DB310', grp:'L3-INFO-A', room:'B-207',     teacher:'Prof. S. Laghmari' },
+  { day:0, start:8,  dur:2, mod:'Intro to AI',          grp:'CS-G1', room:'Amphi A',     teacher:'Imad Adnane' },
+  { day:2, start:10, dur:2, mod:'Blockchain Technology', grp:'CS-G1', room:'Salle B-204', teacher:'Imad Adnane' },
+  { day:4, start:14, dur:2, mod:'DevSecOps',             grp:'CS-G1', room:'Lab Cyber',   teacher:'Imad Adnane' },
 ];
 
 const NOTIFICATIONS = [
-  { id:1, type:'alert',    title:'Absence threshold exceeded', desc:'Mehdi Alami has missed 6 sessions this month (L3-INFO-B).', time:'12 min ago', read:false, actions:['View student','Contact'] },
-  { id:2, type:'success',  title:'Payment received',           desc:'Invoice INV-24010 — Salma Rachidi — 11,000 MAD confirmed.', time:'1h ago',     read:false, actions:['View invoice'] },
-  { id:3, type:'reminder', title:'Grade submission deadline',  desc:'Submit CS301 midterm grades by Friday Oct 25, 23:59.',      time:'3h ago',     read:false, actions:['Open grades'] },
-  { id:4, type:'info',     title:'Schedule update',            desc:'PH210 Tuesday session moved to Lab C-12 (from A-118).',    time:'Yesterday',  read:true },
-  { id:5, type:'alert',    title:'4 overdue invoices',         desc:'Group L3-INFO-A has 4 overdue invoices totaling 48,500 MAD.',time:'Yesterday', read:true,  actions:['Review payments'] },
-  { id:6, type:'success',  title:'New group created',          desc:'L3-INFO-A has been successfully created for 2024-25.',     time:'2d ago',     read:true },
-  { id:7, type:'reminder', title:'Faculty meeting',            desc:'Computer Science department meeting — Mon Oct 28, 14:00.', time:'3d ago',     read:true },
+  { id:1, type:'success',  title:'Bienvenue sur CampusOps',     desc:'Le système est opérationnel pour l\'année 2025/2026. Toutes les filières EIDIA sont configurées.', time:'Today', read:false },
+  { id:2, type:'alert',    title:'Paiement en attente',         desc:'Mensualité de 5 000 MAD due le mois prochain.', time:'Today', read:false },
+  { id:3, type:'info',     title:'Sessions planifiées',         desc:'Les sessions S8 pour CS & Cyber Security sont programmées cette semaine.', time:'Today', read:false },
+  { id:4, type:'reminder', title:'Rappel de saisie',            desc:'Veuillez mettre à jour la progression du module NLP pour AI-G1 et AI-G2.', time:'Today', read:true },
+  { id:5, type:'info',     title:'Nouveau semestre',            desc:'Les modules S8 Full Stack sont maintenant disponibles dans le planning.', time:'Today', read:true },
 ];
 
 const USERS_LIST = [
-  { id:'U-001', name:'Dr. Amira Saadi',     role:'admin',      email:'a.saadi@campus.edu',    branch:'—',                status:'active',   init:'AS', color:'#5FA83C' },
-  { id:'U-002', name:'Khalid El Amrani',    role:'scolarite',  email:'k.elamrani@campus.edu', branch:'—',                status:'active',   init:'KE', color:'#7C3AED' },
-  { id:'U-003', name:'Prof. Leïla Bennani', role:'enseignant', email:'l.bennani@campus.edu',  branch:'Computer Science', status:'active',   init:'LB', color:'#7CB342' },
-  { id:'U-004', name:'Prof. Rachid Taibi',  role:'enseignant', email:'r.taibi@campus.edu',    branch:'Mathematics',      status:'active',   init:'RT', color:'#F59E0B' },
-  { id:'U-005', name:'Prof. Mehdi Chafiq',  role:'enseignant', email:'m.chafiq@campus.edu',   branch:'Physics',          status:'active',   init:'MC', color:'#DC2626' },
-  { id:'U-006', name:'Prof. Omar Mansouri', role:'enseignant', email:'o.mansouri@campus.edu', branch:'Computer Science', status:'inactive', init:'OM', color:'#0891B2' },
-  { id:'U-007', name:'Ms. Jamila Alaoui',   role:'enseignant', email:'j.alaoui@campus.edu',   branch:'Languages',        status:'active',   init:'JA', color:'#DB2777' },
+  { id:'U-001', name:'Hamza Khchinich',  role:'admin',      email:'hamza.khchichine@eidia.ueuromed.org', branch:'EIDIA', status:'active', init:'HK', color:'#5FA83C' },
+  { id:'U-002', name:'Karima Ed Dahhak', role:'scolarite',  email:'karima.eddahhak@eidia.ueuromed.org',  branch:'EIDIA', status:'active', init:'KE', color:'#7C3AED' },
+  { id:'U-003', name:'Imad Adnane',      role:'enseignant', email:'imad.adnane@eidia.ueuromed.org',      branch:'EIDIA', status:'active', init:'IA', color:'#7CB342' },
+  { id:'U-004', name:'Siham Lyzoul',     role:'etudiant',   email:'siham.lyzoul@eidia.ueuromed.org',     branch:'EIDIA', status:'active', init:'SL', color:'#F59E0B' },
+  { id:'U-005', name:'Brahim Nakkar',    role:'etudiant',   email:'brahim.nakkar@eidia.ueuromed.org',    branch:'EIDIA', status:'active', init:'BN', color:'#0891B2' },
 ];
 
-// Realistic scolarité dashboard stats (toned down from inflated numbers)
+// Scolarité dashboard stats — derived from real EIDIA seed
 const SCOLARITE_STATS = {
-  totalStudents:    577,
-  totalGroups:      24,
-  attendanceRate:   89.4,
-  collectionRate:   76.2,
-  pendingPayments:  18,
-  activeRequests:   7,
+  totalStudents:    2,
+  totalGroups:      1,
+  attendanceRate:   92.5,
+  collectionRate:   50.0,
+  pendingPayments:  2,
+  activeRequests:   0,
 };
 
-// Sample student grades (realistic French scale 0-20)
+// Student grades — S8 CS & Cyber Security modules
 const STUDENT_GRADES = [
-  { module:'CS301', name:'Algorithms & Data Structures', exam:14.5, hw:16, participation:15, average:15.1 },
-  { module:'MA205', name:'Linear Algebra',               exam:13,   hw:14.5, participation:13, average:13.6 },
-  { module:'PH210', name:'Quantum Physics',              exam:11.5, hw:13, participation:12, average:12.2 },
-  { module:'EN150', name:'Business English',             exam:17,   hw:16, participation:18, average:16.9 },
-  { module:'CS420', name:'Distributed Systems',          exam:15.5, hw:14, participation:15, average:14.9 },
-  { module:'DB310', name:'Database Systems',             exam:16,   hw:17, participation:16, average:16.4 },
+  { module:'S8-01', name:'Intro to AI',                          exam:15.0, hw:16, participation:14, average:15.0 },
+  { module:'S8-02', name:'Distributed Applications',             exam:14.5, hw:15, participation:13, average:14.2 },
+  { module:'S8-03', name:'Lang & Comm 4',                        exam:16.0, hw:17, participation:16, average:16.3 },
+  { module:'S8-04', name:'Digital Forensics & Incident Management', exam:13.5, hw:14, participation:12, average:13.2 },
+  { module:'S8-05', name:'NoSQL Database Security',              exam:15.5, hw:16, participation:15, average:15.5 },
+  { module:'S8-06', name:'Blockchain Technology',                exam:14.0, hw:15, participation:14, average:14.3 },
+  { module:'S8-07', name:'DevSecOps',                            exam:16.5, hw:17, participation:16, average:16.5 },
 ];
 
 // Per-period averages for student dashboard chart
 const STUDENT_GRADE_HISTORY = {
   labels:['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'],
   series:[
-    { module:'CS301', color:'#5FA83C', values:[14.0, 14.4, 15.1, 15.0, 15.3, 15.5, 15.1, 15.4] },
-    { module:'MA205', color:'#7C3AED', values:[12.5, 13.0, 13.2, 13.6, 13.4, 13.7, 13.6, 13.9] },
-    { module:'EN150', color:'#F59E0B', values:[16.0, 16.5, 16.8, 16.7, 16.9, 17.0, 16.9, 17.1] },
-    { module:'DB310', color:'#0891B2', values:[15.5, 15.8, 16.1, 16.3, 16.4, 16.5, 16.4, 16.6] },
+    { module:'Intro to AI',     color:'#5FA83C', values:[13.0, 13.5, 14.0, 14.5, 14.8, 15.0, 15.0, 15.2] },
+    { module:'Distributed Apps', color:'#7C3AED', values:[12.5, 13.0, 13.5, 13.8, 14.0, 14.2, 14.2, 14.5] },
+    { module:'Lang & Comm 4',    color:'#F59E0B', values:[15.0, 15.5, 15.8, 16.0, 16.2, 16.3, 16.3, 16.5] },
+    { module:'DevSecOps',        color:'#0891B2', values:[14.5, 15.0, 15.5, 15.8, 16.0, 16.3, 16.5, 16.7] },
   ],
 };
 

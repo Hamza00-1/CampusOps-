@@ -62,5 +62,6 @@ router.get('/:id', authenticate, validate({ params: paymentIdParam }), paymentCo
 router.post('/', authenticate, requireRole('Admin', 'Scolarite'), validate({ body: createPaymentSchema }), paymentController.create);
 router.put('/:id', authenticate, requireRole('Admin', 'Scolarite'), validate({ params: paymentIdParam, body: updatePaymentSchema }), paymentController.update);
 router.delete('/:id', authenticate, requireRole('Admin', 'Scolarite'), validate({ params: paymentIdParam }), paymentController.delete);
+router.post('/:id/send-receipt', authenticate, requireRole('Admin', 'Scolarite'), validate({ params: paymentIdParam }), paymentController.sendReceipt);
 
 export default router;

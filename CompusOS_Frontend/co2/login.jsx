@@ -2,10 +2,10 @@
 const { useState: uSL, useEffect: uEL } = React;
 
 const DEMO_CREDS = {
-  admin:      { email: 'admin@campusops.ma',     password: 'Admin123!' },
-  scolarite:  { email: 'scolarite@campusops.ma', password: 'Scolar123!' },
-  enseignant: { email: 'prof@campusops.ma',       password: 'Prof123!' },
-  etudiant:   { email: 'student@campusops.ma',    password: 'Student123!' },
+  admin:      { email: 'hamza.khchichine@eidia.ueuromed.org', password: 'CampusOps@2026' },
+  scolarite:  { email: 'karima.eddahhak@eidia.ueuromed.org',  password: 'CampusOps@2026' },
+  enseignant: { email: 'imad.adnane@eidia.ueuromed.org',      password: 'CampusOps@2026' },
+  etudiant:   { email: 'siham.lyzoul@eidia.ueuromed.org',     password: 'CampusOps@2026' },
 };
 
 function Login({ onAuth }) {

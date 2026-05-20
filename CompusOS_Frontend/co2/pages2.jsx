@@ -48,14 +48,14 @@ function generateRoleNotifications(role) {
     items.push({
       id: 'adm-pay-ok', type: 'success', read: true,
       title: 'Payment batch processed',
-      desc: '12 tuition payments confirmed this week. Collection rate is now 84%.',
+      desc: '2 inscription payments confirmed. Collection rate is 50%.',
       time: today,
       actions: ['Review payments'],
     });
     items.push({
       id: 'adm-sch-1', type: 'info', read: true,
-      title: 'Schedule published for next semester',
-      desc: 'The planning for S2 2024-25 has been finalized and is visible to all groups.',
+      title: 'Schedule published for S8',
+      desc: 'The planning for S8 2025/2026 has been finalized and is visible to CS-G1.',
       time: today,
     });
     return items;
@@ -92,8 +92,8 @@ function generateRoleNotifications(role) {
     });
     items.push({
       id: 'sco-enr-1', type: 'info', read: true,
-      title: 'New student enrollment',
-      desc: '3 new students have been enrolled this week across L2 and L3 groups.',
+      title: 'Student enrollment',
+      desc: '2 students are enrolled in CS-G1 for 2025/2026.',
       time: today,
     });
     return items;
@@ -101,20 +101,20 @@ function generateRoleNotifications(role) {
 
   if (role === 'enseignant') {
     const uid = window._userId;
-    const myGroups = ['L3-INFO-A', 'L3-INFO-B'];
+    const myGroups = ['CS-G1'];
     const atRisk = (STUDENTS || []).filter(s => myGroups.includes(s.group) && s.att < 75);
     const items = [];
     items.push({
       id: 'ens-grd-1', type: 'reminder', read: false,
-      title: 'Grade submission deadline — CS301',
-      desc: 'You have 28 ungraded midterm submissions for CS301. Deadline: Friday 23:59.',
+      title: 'Grade submission deadline — S8 Modules',
+      desc: 'Please submit grades for CS-G1 S8 modules. Deadline: Friday 23:59.',
       time: today,
       actions: ['Open grades'],
     });
     items.push({
       id: 'ens-grd-2', type: 'reminder', read: false,
-      title: 'Homework #4 pending review',
-      desc: '14 homework submissions are awaiting your review for CS301.',
+      title: 'Homework pending review',
+      desc: 'Homework submissions are awaiting your review for CS-G1.',
       time: today,
       actions: ['Open grades'],
     });
@@ -122,7 +122,7 @@ function generateRoleNotifications(role) {
       items.push({
         id: 'ens-att-' + i, type: 'alert', read: false,
         title: `Attendance alert: ${s.name}`,
-        desc: `${s.name} (${s.group}) has ${s.att}% attendance in your class — below the 75% threshold.`,
+        desc: `${s.name} (${s.group}) has ${s.att}% attendance — below the 75% threshold.`,
         time: today,
         actions: ['View student'],
       });
@@ -130,7 +130,7 @@ function generateRoleNotifications(role) {
     items.push({
       id: 'ens-sch-1', type: 'info', read: true,
       title: 'Schedule update',
-      desc: 'Your Thursday CS301 session has been moved to room B-202. Check the Planning tab.',
+      desc: 'Your sessions for CS-G1 are confirmed for this week. Check the Planning tab.',
       time: today,
     });
     return items;
@@ -154,7 +154,7 @@ function generateRoleNotifications(role) {
     items.push({
       id: 'etu-grd-1', type: 'success', read: false,
       title: 'New grades posted',
-      desc: 'Your grades for CS301 midterm have been published. Check the Grades tab.',
+      desc: 'Your S8 module grades have been published. Check the Grades tab.',
       time: today,
       actions: ['Open grades'],
     });
@@ -182,9 +182,18 @@ function Payments({ role, toast }){
   const { t, lang } = useI18n();
   const [filter, setFilter] = uSP2('all');
   const [receipt, setReceipt] = uSP2(null);
+  const [adding, setAdding] = uSP2(false);
+  const [editing, setEditing] = uSP2(null);
+  const [, force] = uSP2(0);
   const me = ROLES.etudiant;
+  const canEdit = role === 'admin' || role === 'scolarite';
 
-  // For student: show all PAYMENTS (API already filters); fallback to name match for mock data
+  // Add form
+  const [addForm, setAddForm] = uSP2({ studentId:'', planType:'Inscription', amount:45000, status:'Unpaid', dueDate:'' });
+  // Edit form
+  const [editForm, setEditForm] = uSP2({ status:'', amount:0 });
+
+  // For student: show only their payments
   let rows = PAYMENTS;
   if (role === 'etudiant') {
     const uid = window._userId;
@@ -198,20 +207,88 @@ function Payments({ role, toast }){
 
   const totals = {
     paid: PAYMENTS.filter(p=>p.status==='paid').reduce((a,p)=>a+p.amount,0),
-    pending: PAYMENTS.filter(p=>p.status==='pending'||p.status==='partial').reduce((a,p)=>a+p.amount,0),
+    pending: PAYMENTS.filter(p=>p.status==='pending'||p.status==='partial'||p.status==='unpaid').reduce((a,p)=>a+p.amount,0),
     overdue: PAYMENTS.filter(p=>p.status==='overdue').reduce((a,p)=>a+p.amount,0),
   };
   const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-US') : n) + ' MAD';
 
-  const openReceipt = (p) => setReceipt(p);
-  const closeReceipt = () => setReceipt(null);
+  // Get students for the dropdown
+  const studentList = (window.STUDENTS || STUDENTS || []);
 
-  const sendToStudent = (p) => {
-    toast({ type:'success', title:'Invoice sent', desc:`Receipt for ${p.student} has been sent via email.` });
+  const openAdd = () => {
+    const today = new Date();
+    const nextMonth = new Date(today); nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const dueDateStr = nextMonth.toISOString().split('T')[0];
+    setAddForm({ studentId: studentList[0]?.id || '', planType:'Inscription', amount:45000, status:'Unpaid', dueDate: dueDateStr });
+    setAdding(true);
   };
 
-  const printReceipt = () => {
-    window.print();
+  const saveAdd = async () => {
+    if (!addForm.studentId) { toast({ type:'error', title:'Select a student' }); return; }
+    if (!addForm.dueDate) { toast({ type:'error', title:'Set a due date' }); return; }
+    try {
+      await window.api.request('/payments', {
+        method: 'POST',
+        body: {
+          studentId: addForm.studentId,
+          planType: addForm.planType,
+          amount: parseFloat(addForm.amount) || 0,
+          status: addForm.status,
+          dueDate: addForm.dueDate,
+        },
+      });
+      toast({ type:'success', title:'Payment created', desc:'Invoice added to database.' });
+      setAdding(false);
+      if (window.refreshAllData) await window.refreshAllData();
+      force(x => x + 1);
+    } catch (err) {
+      toast({ type:'error', title:'Failed to create payment', desc: err?.message || 'API error' });
+    }
+  };
+
+  const openEdit = (p) => {
+    setEditForm({ status: (p.status||'').charAt(0).toUpperCase() + (p.status||'').slice(1), amount: p.amount });
+    setEditing(p);
+  };
+
+  const saveEdit = async () => {
+    if (!editing?.id) return;
+    try {
+      await window.api.request('/payments/' + editing.id, {
+        method: 'PUT',
+        body: { status: editForm.status, amount: parseFloat(editForm.amount) || 0 },
+      });
+      toast({ type:'success', title:'Payment updated', desc:'Changes saved.' });
+      setEditing(null);
+      if (window.refreshAllData) await window.refreshAllData();
+      force(x => x + 1);
+    } catch (err) {
+      toast({ type:'error', title:'Failed to update', desc: err?.message || 'API error' });
+    }
+  };
+
+  const deletePayment = async (p) => {
+    if (!confirm('Delete payment ' + (p.id?.substring(0,8)||'') + ' for ' + p.student + '?')) return;
+    try {
+      await window.api.request('/payments/' + p.id, { method: 'DELETE' });
+      toast({ type:'success', title:'Payment deleted', desc:'Invoice removed.' });
+      if (window.refreshAllData) await window.refreshAllData();
+      force(x => x + 1);
+    } catch (err) {
+      toast({ type:'error', title:'Failed to delete', desc: err?.message || 'API error' });
+    }
+  };
+
+  const openReceipt = (p) => setReceipt(p);
+  const closeReceipt = () => setReceipt(null);
+  const sendToStudent = async (p) => {
+    try {
+      const res = await window.api.request('/payments/' + p.id + '/send-receipt', { method: 'POST' });
+      const data = res?.data || {};
+      toast({ type:'success', title:'Receipt sent!', desc: data.to ? `Email sent to ${data.to}` : 'Receipt processed.' });
+    } catch (err) {
+      toast({ type:'error', title:'Failed to send', desc: err?.message || 'Could not send receipt email.' });
+    }
   };
 
   return (
@@ -221,6 +298,11 @@ function Payments({ role, toast }){
           <h1>{t('nav.Payments')}</h1>
           <div className="sub">{lang==='fr'?'Suivi des frais et paiements':'Tuition fees and payments'}</div>
         </div>
+        {canEdit && (
+          <div className="page-actions">
+            <button className="btn btn-primary btn-sm" onClick={openAdd}><Icon name="plus" size={14}/>{lang==='fr'?'Ajouter':'Add payment'}</button>
+          </div>
+        )}
       </div>
       {role!=='etudiant' && (
         <div className="grid-3" style={{marginBottom:14}}>
@@ -234,38 +316,127 @@ function Payments({ role, toast }){
           <div className="segment">
             <button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>All</button>
             <button className={filter==='paid'?'active':''} onClick={()=>setFilter('paid')}>{t('pay.paid')}</button>
-            <button className={filter==='pending'?'active':''} onClick={()=>setFilter('pending')}>{t('pay.pending')}</button>
-            <button className={filter==='overdue'?'active':''} onClick={()=>setFilter('overdue')}>{t('pay.overdue')}</button>
+            <button className={filter==='unpaid'?'active':''} onClick={()=>setFilter('unpaid')}>Unpaid</button>
           </div>
           <div className="meta">{rows.length} invoices</div>
         </div>
         <table className="tbl">
           <thead>
             <tr>
-              <th>Invoice</th><th>Student</th><th>Group</th><th>Type</th>
-              <th>Amount</th><th>Status</th><th>Due</th><th></th>
+              <th>Student</th><th>Type</th>
+              <th>Amount</th><th>Status</th><th>Due</th>{canEdit && <th></th>}
             </tr>
           </thead>
           <tbody>
             {rows.map(p => (
               <tr key={p.id}>
-                <td className="mono" style={{fontWeight:600}}>{p.id}</td>
-                <td>{p.student}</td>
-                <td>{p.group}</td>
+                <td><strong>{p.student}</strong></td>
                 <td>{p.type}</td>
                 <td className="mono" style={{fontWeight:600}}>{fmt(p.amount)}</td>
-                <td><span className={`pill ${p.status}`}><span className="d"></span>{t('pay.'+p.status, p.status)}</span></td>
+                <td><span className={`pill ${p.status}`}><span className="d"></span>{p.status}</span></td>
                 <td style={{color:'var(--text-2)',fontSize:12.5}}>{p.date}</td>
-                <td style={{textAlign:'right'}}>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>openReceipt(p)}>
-                    Receipt
-                  </button>
-                </td>
+                {canEdit && (
+                  <td style={{textAlign:'right',whiteSpace:'nowrap'}}>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>openReceipt(p)}>Receipt</button>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(p)}><Icon name="edit" size={14}/></button>
+                    <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={()=>deletePayment(p)}><Icon name="trash" size={14}/></button>
+                  </td>
+                )}
+                {!canEdit && (
+                  <td style={{textAlign:'right'}}>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>openReceipt(p)}>Receipt</button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Add Payment modal */}
+      {adding && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setAdding(false)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>{lang==='fr'?'Nouveau paiement':'New payment'}</h3>
+              <button className="tb-btn" onClick={()=>setAdding(false)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field" style={{gridColumn:'1/-1'}}>
+                  <label>Student</label>
+                  <select value={addForm.studentId} onChange={e=>setAddForm(f=>({...f,studentId:e.target.value}))}>
+                    <option value="">— Select —</option>
+                    {studentList.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Type</label>
+                  <select value={addForm.planType} onChange={e=>setAddForm(f=>({...f,planType:e.target.value}))}>
+                    <option value="Inscription">Inscription</option>
+                    <option value="Mensualite">Mensualité</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Amount (MAD)</label>
+                  <input type="number" min="0" value={addForm.amount} onChange={e=>setAddForm(f=>({...f,amount:e.target.value}))}/>
+                </div>
+                <div className="field">
+                  <label>Status</label>
+                  <select value={addForm.status} onChange={e=>setAddForm(f=>({...f,status:e.target.value}))}>
+                    <option value="Unpaid">Unpaid</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Partial">Partial</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Due date</label>
+                  <input type="date" value={addForm.dueDate} onChange={e=>setAddForm(f=>({...f,dueDate:e.target.value}))}/>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={()=>setAdding(false)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveAdd}>{t('btn.save')}</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Edit Payment modal */}
+      {editing && (
+        <>
+          <div className="drawer-bg open" onClick={()=>setEditing(null)}></div>
+          <div className="modal open">
+            <div className="modal-head">
+              <h3 style={{fontSize:16}}>Edit payment — {editing.student}</h3>
+              <button className="tb-btn" onClick={()=>setEditing(null)}><Icon name="close" size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div className="grid-2">
+                <div className="field">
+                  <label>Status</label>
+                  <select value={editForm.status} onChange={e=>setEditForm(f=>({...f,status:e.target.value}))}>
+                    <option value="Unpaid">Unpaid</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Partial">Partial</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Amount (MAD)</label>
+                  <input type="number" min="0" value={editForm.amount} onChange={e=>setEditForm(f=>({...f,amount:e.target.value}))}/>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-danger-soft" style={{marginRight:'auto'}} onClick={()=>{ deletePayment(editing); setEditing(null); }}><Icon name="trash" size={14}/> Delete</button>
+              <button className="btn btn-ghost" onClick={()=>setEditing(null)}>{t('btn.cancel')}</button>
+              <button className="btn btn-primary" onClick={saveEdit}>{t('btn.save')}</button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Receipt / Invoice modal */}
       {receipt && (
@@ -284,7 +455,7 @@ function Payments({ role, toast }){
                     <div style={{fontSize:11,color:'var(--text-3)',marginTop:2}}>Official Payment Receipt</div>
                   </div>
                   <div style={{textAlign:'right'}}>
-                    <div style={{fontSize:12,fontFamily:'var(--mono)',fontWeight:700,color:'var(--text)'}}>{receipt.id}</div>
+                    <div style={{fontSize:12,fontFamily:'var(--mono)',fontWeight:700,color:'var(--text)'}}>{(receipt.id||'').substring(0,8)}</div>
                     <div style={{fontSize:11,color:'var(--text-3)',marginTop:2}}>{receipt.date}</div>
                   </div>
                 </div>
@@ -295,21 +466,13 @@ function Payments({ role, toast }){
                     <div style={{fontWeight:600}}>{receipt.student}</div>
                   </div>
                   <div>
-                    <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:3}}>Group</div>
-                    <div>{receipt.group || '—'}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:3}}>Payment type</div>
+                    <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:3}}>Type</div>
                     <div>{receipt.type}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-3)',marginBottom:3}}>Method</div>
-                    <div>{receipt.method || '—'}</div>
                   </div>
                 </div>
                 <div style={{height:1,background:'var(--border)',margin:'16px 0'}}></div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <div style={{fontSize:13,color:'var(--text-2)'}}>Amount due</div>
+                  <div style={{fontSize:13,color:'var(--text-2)'}}>Amount</div>
                   <div style={{fontSize:22,fontWeight:800,fontFamily:'var(--head-font)',color:'var(--text)'}}>{fmt(receipt.amount)}</div>
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
@@ -319,13 +482,9 @@ function Payments({ role, toast }){
               </div>
             </div>
             <div className="modal-foot">
-              <button className="btn btn-ghost" onClick={printReceipt}>
-                Print
-              </button>
-              {(role === 'admin' || role === 'scolarite') && (
-                <button className="btn btn-ghost" onClick={()=>{ sendToStudent(receipt); closeReceipt(); }}>
-                  Send to student
-                </button>
+              <button className="btn btn-ghost" onClick={()=>window.print()}>Print</button>
+              {canEdit && (
+                <button className="btn btn-ghost" onClick={()=>{ sendToStudent(receipt); closeReceipt(); }}>Send to student</button>
               )}
               <button className="btn btn-primary" onClick={closeReceipt}>{lang==='fr'?'Fermer':'Close'}</button>
             </div>
@@ -796,7 +955,7 @@ function Groups({ toast }){
               <div className="grid-2">
                 <div className="field">
                   <label>Group ID</label>
-                  <input value={addGForm.id} onChange={e=>setAddGForm(f=>({...f,id:e.target.value}))} placeholder="e.g. L3-INFO-C"/>
+                  <input value={addGForm.id} onChange={e=>setAddGForm(f=>({...f,id:e.target.value}))} placeholder="e.g. CS-G2"/>
                 </div>
                 <div className="field">
                   <label>Name</label>

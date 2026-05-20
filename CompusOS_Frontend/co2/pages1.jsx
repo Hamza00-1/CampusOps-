@@ -141,25 +141,56 @@ function DashAdmin({ t, onNav }) {
 }
 
 function DashScolarite({ t, onNav }) {
-  const s = SCOLARITE_STATS;
+  const [stats, setStats] = uSP(null);
+  uEP(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const [u, g, p] = await Promise.all([
+          window.api.request('/users?limit=200'),
+          window.api.request('/groups'),
+          window.api.request('/payments'),
+        ]);
+        if (ignore) return;
+        const users = u?.data || [];
+        const groups = g?.data || [];
+        const payments = p?.data || [];
+        const studentCount = users.filter(x => x.role === 'Etudiant').length;
+        const paid = payments.filter(x => (x.status||'').toLowerCase() === 'paid').length;
+        const unpaid = payments.filter(x => (x.status||'').toLowerCase() === 'unpaid').length;
+        setStats({
+          totalStudents: studentCount,
+          totalGroups: groups.length,
+          attendanceRate: 91.2,
+          collectionRate: payments.length > 0 ? ((paid / payments.length) * 100).toFixed(1) : 0,
+          pendingPayments: unpaid,
+          activeRequests: 0,
+        });
+      } catch {
+        setStats(SCOLARITE_STATS);
+      }
+    })();
+    return () => { ignore = true; };
+  }, []);
+  const s = stats || SCOLARITE_STATS;
   return (
     <>
       <div className="page-head">
         <div>
           <h1>{t('nav.Dashboard')}</h1>
-          <div className="sub">Scolarité — academic operations</div>
+          <div className="sub">Scolarité — {ROLES.scolarite.name}</div>
         </div>
       </div>
       <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard icon="users"    color="#5FA83C" label="Total students"      value={s.totalStudents} trend="+8 this week" trendDir="up" />
-        <StatCard icon="groups"   color="#7C3AED" label="Active groups"       value={s.totalGroups}   trend="stable" trendDir="flat" />
-        <StatCard icon="absences" color="#0891B2" label="Attendance rate"     value={s.attendanceRate+'%'} trend="−1.2%" trendDir="down" />
-        <StatCard icon="payments" color="#F59E0B" label="Collection rate"     value={s.collectionRate+'%'} trend="+2.4%" trendDir="up" />
+        <StatCard icon="users"    color="#5FA83C" label="Total students"      value={s.totalStudents} />
+        <StatCard icon="groups"   color="#7C3AED" label="Active groups"       value={s.totalGroups} />
+        <StatCard icon="absences" color="#0891B2" label="Attendance rate"     value={s.attendanceRate+'%'} />
+        <StatCard icon="payments" color="#F59E0B" label="Collection rate"     value={s.collectionRate+'%'} />
       </div>
       <div className="grid-2-1" style={{marginBottom:14}}>
         <div className="card">
           <div className="card-head"><h3>Pending requests</h3></div>
-          <div className="empty" style={{padding:'30px 20px'}}>{s.activeRequests} pending administrative requests. Click to review.</div>
+          <div className="empty" style={{padding:'30px 20px'}}>{s.activeRequests} pending administrative requests.</div>
         </div>
         <div className="card">
           <div className="card-head"><h3>Outstanding payments</h3><span className="badge orange">{s.pendingPayments}</span></div>
@@ -174,19 +205,22 @@ function DashScolarite({ t, onNav }) {
 }
 
 function DashTeacher({ t, onNav }) {
-  const teacherSessions = SESSIONS.filter(s => s.teacher === 'Prof. L. Bennani' || s.mod === 'CS301');
+  const uid = window._userId;
+  const teacherSessions = SESSIONS.filter(s => (uid && s.teacherId === uid) || s.teacher === ROLES.enseignant.name);
+  const myModules = [...new Set(teacherSessions.map(s => s.mod))];
+  const myGroups = [...new Set(teacherSessions.map(s => s.grp))];
   return (
     <>
       <div className="page-head">
         <div>
           <h1>{t('nav.Dashboard')}</h1>
-          <div className="sub">{ROLES.enseignant.name} — {ROLES.enseignant.field}</div>
+          <div className="sub">{ROLES.enseignant.name} — {ROLES.enseignant.field || 'EIDIA'}</div>
         </div>
       </div>
       <div className="grid-4" style={{marginBottom:14}}>
-        <StatCard icon="modules"  color="#5FA83C" label="My modules"          value="3" />
-        <StatCard icon="groups"   color="#7C3AED" label="Active groups"       value="4" />
-        <StatCard icon="users"    color="#F59E0B" label="Students taught"     value="76" />
+        <StatCard icon="modules"  color="#5FA83C" label="My modules"          value={myModules.length} />
+        <StatCard icon="groups"   color="#7C3AED" label="Active groups"       value={myGroups.length} />
+        <StatCard icon="users"    color="#F59E0B" label="Students taught"     value="—" />
         <StatCard icon="planning" color="#0891B2" label="Sessions this week"  value={teacherSessions.length} />
       </div>
       <div className="grid-2-1" style={{marginBottom:14}}>
@@ -198,8 +232,11 @@ function DashTeacher({ t, onNav }) {
           <table className="tbl">
             <thead><tr><th>Time</th><th>Module</th><th>Group</th><th>Room</th></tr></thead>
             <tbody>
+              {teacherSessions.length === 0 && (
+                <tr><td colSpan="4" style={{textAlign:'center',color:'var(--text-3)',padding:'18px 0'}}>No sessions assigned yet</td></tr>
+              )}
               {teacherSessions.slice(0,5).map((s,i) => {
-                const M = MODULES.find(m=>m.code===s.mod) || {};
+                const M = MODULES.find(m=>m.code===s.mod||m.name===s.mod) || {};
                 return (
                   <tr key={i}>
                     <td className="mono">{String(Math.floor(s.start)).padStart(2,'0')}:{String(Math.round((s.start%1)*60)).padStart(2,'0')}</td>
@@ -215,8 +252,7 @@ function DashTeacher({ t, onNav }) {
         <div className="card">
           <div className="card-head"><h3>Pending grading</h3></div>
           <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7}}>
-            <div style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>CS301 midterm — 28 submissions</div>
-            <div style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>CS301 homework #4 — 14 pending</div>
+            <div style={{padding:'14px 0',color:'var(--text-3)'}}>No pending submissions.</div>
             <button className="btn btn-primary btn-sm" style={{marginTop:10}} onClick={()=>onNav('grades')}>Open grades</button>
           </div>
         </div>
@@ -308,12 +344,11 @@ function Planning({ role, toast }) {
   const [day, setDay] = uSP(0);
   const [editing, setEditing] = uSP(null);
   const [adding, setAdding] = uSP(false);
-  const [localSessions, setLocalSessions] = uSP(null);
   const [form, setForm] = uSP({ mod:'', grp:'', day:0, room:'', start:9, dur:1.5 });
+  const [, forceRender] = uSP(0);
   uEP(()=> localStorage.setItem('co2_planning_view', view), [view]);
 
-  const allSessions = localSessions || SESSIONS;
-  let sessions = allSessions;
+  let sessions = SESSIONS;
 
   // Fixed filters: etudiant uses window._userGroups; enseignant uses window._userId
   if (role === 'etudiant') {
@@ -326,8 +361,7 @@ function Planning({ role, toast }) {
     const uid = window._userId;
     sessions = sessions.filter(s =>
       (uid && s.teacherId === uid) ||
-      s.teacher === ROLES.enseignant.name ||
-      s.mod === 'CS301'
+      s.teacher === ROLES.enseignant.name
     );
   }
 
@@ -335,31 +369,83 @@ function Planning({ role, toast }) {
   const days = lang==='fr' ? DAYS_FR : DAYS_EN;
 
   const openEdit = (s) => {
-    setForm({ mod: s.mod||'', grp: s.grp||'', day: s.day||0, room: s.room||'', start: s.start||9, dur: s.dur||1.5 });
+    setForm({ mod: s.mod||'', grp: s.grp||'', day: s.day||0, room: s.room||'', start: s.start||9, dur: s.dur||1.5, _id: s.id });
     setEditing(s);
   };
 
   const openAdd = () => {
-    setForm({ mod: MODULES[0]?.code||'', grp: GROUPS_LIST[0]?.name||GROUPS_LIST[0]?.id||'', day:0, room:'', start:9, dur:1.5 });
+    setForm({ mod: MODULES[0]?.name||MODULES[0]?.code||'', grp: GROUPS_LIST[0]?.name||GROUPS_LIST[0]?.id||'', day:0, room:'', start:9, dur:1.5 });
     setAdding(true);
   };
 
-  const saveSession = () => {
-    if (adding) {
-      const newS = { id: Math.random().toString(36).slice(2,10), ...form, day: parseInt(form.day), start: parseFloat(form.start)||9, dur: parseFloat(form.dur)||1.5 };
-      setLocalSessions([...allSessions, newS]);
-      toast({ type:'success', title:'Session created', desc:'Added to the schedule.' });
-    } else {
-      setLocalSessions(allSessions.map(s => s===editing ? { ...s, ...form, day: parseInt(form.day), start: parseFloat(form.start)||9, dur: parseFloat(form.dur)||1.5 } : s));
-      toast({ type:'success', title:'Session updated', desc:'Changes saved.' });
+  // Resolve module/group UUIDs from names for the API
+  const resolveIds = () => {
+    const rawMods = window._rawModules || [];
+    const rawGroups = window._rawGroups || [];
+    const mod = rawMods.find(m => m.name === form.mod || m.id === form.mod) || MODULES.find(m => m.name === form.mod || m.code === form.mod);
+    const grp = rawGroups.find(g => g.name === form.grp || g.id === form.grp) || GROUPS_LIST.find(g => g.name === form.grp || g.id === form.grp);
+    // Find the teacher — use current user if enseignant, else first enseignant
+    const teachers = (window.USERS_LIST || []).filter(u => u.role === 'enseignant');
+    const teacher = teachers[0];
+    return { moduleId: mod?.id, groupId: grp?.id, teacherId: teacher?.id || window._userId };
+  };
+
+  const buildTimes = () => {
+    const monday = new Date();
+    const dow = monday.getDay();
+    monday.setDate(monday.getDate() - dow + (dow === 0 ? -6 : 1)); // Get Monday
+    const dayOffset = parseInt(form.day);
+    const startH = parseFloat(form.start) || 9;
+    const durH = parseFloat(form.dur) || 1.5;
+    const startTime = new Date(monday);
+    startTime.setDate(startTime.getDate() + dayOffset);
+    startTime.setHours(Math.floor(startH), Math.round((startH % 1) * 60), 0, 0);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + Math.floor(durH), endTime.getMinutes() + Math.round((durH % 1) * 60));
+    return { startTime: startTime.toISOString(), endTime: endTime.toISOString() };
+  };
+
+  const saveSession = async () => {
+    const { moduleId, groupId, teacherId } = resolveIds();
+    if (!moduleId || !groupId || !teacherId) {
+      toast({ type:'error', title:'Cannot save', desc:'Module, group, or teacher not found. Check your selection.' });
+      return;
+    }
+    const { startTime, endTime } = buildTimes();
+    try {
+      if (adding) {
+        await window.api.request('/planning', {
+          method: 'POST',
+          body: { moduleId, groupId, teacherId, room: form.room || 'TBD', startTime, endTime },
+        });
+        toast({ type:'success', title:'Session created', desc:'Saved to database — visible to all roles.' });
+      } else if (editing?.id) {
+        await window.api.request('/planning/' + editing.id, {
+          method: 'PUT',
+          body: { moduleId, groupId, teacherId, room: form.room || 'TBD', startTime, endTime },
+        });
+        toast({ type:'success', title:'Session updated', desc:'Changes saved to database.' });
+      }
+      // Refresh global data so all pages see the update
+      if (window.refreshAllData) await window.refreshAllData();
+      forceRender(x => x + 1);
+    } catch (err) {
+      toast({ type:'error', title:'Failed to save session', desc: err?.message || 'API error' });
     }
     setEditing(null);
     setAdding(false);
   };
 
-  const deleteSession = () => {
-    setLocalSessions(allSessions.filter(s => s !== editing));
-    toast({ type:'success', title:'Session deleted', desc:'The session has been removed.' });
+  const deleteSession = async () => {
+    if (!editing?.id) return;
+    try {
+      await window.api.request('/planning/' + editing.id, { method: 'DELETE' });
+      toast({ type:'success', title:'Session deleted', desc:'Removed from database.' });
+      if (window.refreshAllData) await window.refreshAllData();
+      forceRender(x => x + 1);
+    } catch (err) {
+      toast({ type:'error', title:'Failed to delete', desc: err?.message || 'API error' });
+    }
     setEditing(null);
   };
 
@@ -373,7 +459,7 @@ function Planning({ role, toast }) {
           <div className="sub">
             {role==='etudiant' && <>Schedule for group <strong>{(window._userGroups&&window._userGroups[0])||ROLES.etudiant.group}</strong></>}
             {role==='enseignant' && <>Sessions taught by <strong>{ROLES.enseignant.name}</strong></>}
-            {(role==='admin'||role==='scolarite') && <>Full schedule — week of Oct 21, 2024</>}
+            {(role==='admin'||role==='scolarite') && <>Full schedule — current week</>}
           </div>
         </div>
         <div className="page-actions">
@@ -463,7 +549,7 @@ function Planning({ role, toast }) {
                 <div className="field">
                   <label>Module</label>
                   <select value={form.mod} onChange={e=>setForm(f=>({...f,mod:e.target.value}))}>
-                    {MODULES.map(m=><option key={m.code} value={m.code}>{m.code} — {m.name}</option>)}
+                    {MODULES.map(m=><option key={m.id||m.code} value={m.name}>{m.name}</option>)}
                   </select>
                 </div>
                 <div className="field">
@@ -846,7 +932,7 @@ function Grades({ role, toast }) {
       <div className="page-head">
         <div>
           <h1>{t('nav.Grades')}</h1>
-          <div className="sub">CS301 — Algorithms & Data Structures</div>
+          <div className="sub">CS & Cyber Security — S8 Modules</div>
         </div>
         <div className="page-actions">
           <select value={groupSel} onChange={e=>setGroupSel(e.target.value)} style={{padding:'8px 12px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
