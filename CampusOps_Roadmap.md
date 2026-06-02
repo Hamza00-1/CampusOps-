@@ -43,13 +43,14 @@ graph LR
 | 4 | Generate + run migration | `prisma/migrations/` |
 | 5 | Seed data script with demo accounts | `prisma/seed.ts` |
 
-Demo accounts created:
-| Email | Role | Password |
-|-------|------|----------|
-| `admin@campusops.ma` | Admin | `Admin123!` |
-| `scolarite@campusops.ma` | Scolarite | `Scolar123!` |
-| `prof@campusops.ma` | Enseignant | `Prof123!` |
-| `student@campusops.ma` | Etudiant | `Student123!` |
+Demo accounts (password: `CampusOps@2026`):
+| Email | Role |
+|-------|------|
+| `hamza.khchichine@eidia.ueuromed.org` | Admin |
+| `karima.eddahhak@eidia.ueuromed.org` | Scolarite |
+| `imad.adnane@eidia.ueuromed.org` | Enseignant |
+| `siham.lyzoul@eidia.ueuromed.org` | Etudiant |
+| `brahim.nakkar@eidia.ueuromed.org` | Etudiant |
 
 ---
 
