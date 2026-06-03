@@ -41,4 +41,34 @@ router.post(
     openclawController.triggerDailyPlanning,
 );
 
+/** @swagger
+ * /api/openclaw/trigger/absence-notify:
+ *   post:
+ *     tags: [OpenClaw]
+ *     summary: Notify students about recent absences (Admin)
+ *     security: [{ BearerAuth: [] }]
+ *     responses:
+ *       200: { description: Notification summary } */
+router.post(
+    '/trigger/absence-notify',
+    authenticate,
+    requireRole('Admin'),
+    openclawController.triggerAbsenceNotify,
+);
+
+/** @swagger
+ * /api/openclaw/trigger/overdue-scan:
+ *   post:
+ *     tags: [OpenClaw]
+ *     summary: Scan overdue payments and notify students (Admin)
+ *     security: [{ BearerAuth: [] }]
+ *     responses:
+ *       200: { description: Scan summary } */
+router.post(
+    '/trigger/overdue-scan',
+    authenticate,
+    requireRole('Admin'),
+    openclawController.triggerOverdueScan,
+);
+
 export default router;

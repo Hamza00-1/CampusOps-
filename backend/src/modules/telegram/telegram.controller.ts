@@ -31,8 +31,19 @@ export async function handleWebhook(req: Request, res: Response, next: NextFunct
         const text: string = message.text.trim();
         const firstName = message.from?.first_name || 'there';
 
+        // Helper: find linked user
+        const getLinkedUser = async () => {
+            return prisma.user.findFirst({
+                where: { telegramChatId: chatId },
+                select: { id: true, name: true, email: true, role: true },
+            });
+        };
+
+        // Helper: format time
+        const fmtTime = (d: Date) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' });
+        const fmtDate = (d: Date) => d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Casablanca' });
+
         if (text === '/start' || text.startsWith('/start ')) {
-            // Generate a random 6-digit code
             const code = String(Math.floor(100000 + Math.random() * 900000));
             const redis = getRedisClient();
             await redis.setex(`tg_link:${code}`, CODE_TTL_SECONDS, chatId);
@@ -47,24 +58,176 @@ export async function handleWebhook(req: Request, res: Response, next: NextFunct
 
             await sendTelegramMessage(chatId, reply);
             logger.info(`🤖 Telegram link code ${code} sent to chatId=${chatId}`);
+
         } else if (text === '/help') {
             await sendTelegramMessage(chatId,
                 `*CampusOps Bot Commands*\n\n` +
-                `/start — Get a link code to connect your account\n` +
-                `/help — Show this help message\n\n` +
-                `Once linked, you will receive instant notifications from CampusOps here.`
+                `📋 /today — Planning du jour\n` +
+                `📅 /week — Planning de la semaine\n` +
+                `❌ /absence — Absences récentes\n` +
+                `📊 /progress — Avancement des modules\n` +
+                `🔗 /start — Lier votre compte\n` +
+                `ℹ️ /status — Vérifier la liaison\n` +
+                `❓ /help — Ce message\n\n` +
+                `_Vous devez d'abord lier votre compte avec /start._`
             );
+
         } else if (text === '/status') {
-            // Check if this chatId is linked to any user
-            const user = await prisma.user.findFirst({ where: { telegramChatId: chatId }, select: { name: true, email: true } });
+            const user = await getLinkedUser();
             if (user) {
-                await sendTelegramMessage(chatId, `✅ Your Telegram is linked to *${user.name}* (${user.email}).`);
+                await sendTelegramMessage(chatId, `✅ Compte lié à *${user.name}* (${user.email}).\nRôle: ${user.role}`);
             } else {
-                await sendTelegramMessage(chatId, `❌ This Telegram account is not linked to any CampusOps account.\n\nSend /start to get a link code.`);
+                await sendTelegramMessage(chatId, `❌ Ce Telegram n'est lié à aucun compte CampusOps.\n\nEnvoyez /start pour obtenir un code.`);
             }
+
+        } else if (text === '/today') {
+            const user = await getLinkedUser();
+            if (!user) { await sendTelegramMessage(chatId, `❌ Compte non lié. Envoyez /start d'abord.`); res.json({ ok: true }); return; }
+
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+            const where: any = { startTime: { gte: today, lt: tomorrow } };
+
+            if (user.role === 'Enseignant') where.teacherId = user.id;
+            if (user.role === 'Etudiant') {
+                const groups = await prisma.groupStudent.findMany({ where: { studentId: user.id }, select: { groupId: true } });
+                where.groupId = { in: groups.map(g => g.groupId) };
+            }
+
+            const sessions = await prisma.planning.findMany({
+                where,
+                include: { module: { select: { name: true } }, group: { select: { name: true } }, teacher: { select: { name: true } } },
+                orderBy: { startTime: 'asc' },
+            });
+
+            if (sessions.length === 0) {
+                await sendTelegramMessage(chatId, `📋 *Planning du jour*\n_${fmtDate(today)}_\n\n🎉 Aucune séance aujourd'hui !`);
+            } else {
+                let msg = `📋 *Planning du jour*\n_${fmtDate(today)}_\n\n`;
+                for (const s of sessions) {
+                    msg += `⏰ ${fmtTime(s.startTime)} → ${fmtTime(s.endTime)}\n`;
+                    msg += `📚 ${s.module.name}\n`;
+                    msg += `👥 ${s.group.name} — 🏫 ${s.room || 'TBD'}\n`;
+                    msg += `👨‍🏫 ${s.teacher.name}\n\n`;
+                }
+                await sendTelegramMessage(chatId, msg);
+            }
+
+        } else if (text === '/week') {
+            const user = await getLinkedUser();
+            if (!user) { await sendTelegramMessage(chatId, `❌ Compte non lié. Envoyez /start d'abord.`); res.json({ ok: true }); return; }
+
+            const now = new Date();
+            const monday = new Date(now); monday.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); monday.setHours(0, 0, 0, 0);
+            const sunday = new Date(monday); sunday.setDate(monday.getDate() + 7);
+            const where: any = { startTime: { gte: monday, lt: sunday } };
+
+            if (user.role === 'Enseignant') where.teacherId = user.id;
+            if (user.role === 'Etudiant') {
+                const groups = await prisma.groupStudent.findMany({ where: { studentId: user.id }, select: { groupId: true } });
+                where.groupId = { in: groups.map(g => g.groupId) };
+            }
+
+            const sessions = await prisma.planning.findMany({
+                where,
+                include: { module: { select: { name: true } }, group: { select: { name: true } }, teacher: { select: { name: true } } },
+                orderBy: { startTime: 'asc' },
+            });
+
+            if (sessions.length === 0) {
+                await sendTelegramMessage(chatId, `📅 *Planning de la semaine*\n\n🎉 Aucune séance cette semaine !`);
+            } else {
+                let msg = `📅 *Planning de la semaine* (${sessions.length} séances)\n\n`;
+                let lastDay = '';
+                for (const s of sessions) {
+                    const day = fmtDate(s.startTime);
+                    if (day !== lastDay) { msg += `\n📌 *${day}*\n`; lastDay = day; }
+                    msg += `  ⏰ ${fmtTime(s.startTime)}–${fmtTime(s.endTime)} | ${s.module.name} | ${s.room || 'TBD'}\n`;
+                }
+                await sendTelegramMessage(chatId, msg);
+            }
+
+        } else if (text === '/absence') {
+            const user = await getLinkedUser();
+            if (!user) { await sendTelegramMessage(chatId, `❌ Compte non lié. Envoyez /start d'abord.`); res.json({ ok: true }); return; }
+
+            // For students: their own absences. For teachers: absences they recorded.
+            const where: any = {};
+            if (user.role === 'Etudiant') where.studentId = user.id;
+            if (user.role === 'Enseignant') {
+                // Absences from their sessions
+                const mySessions = await prisma.planning.findMany({ where: { teacherId: user.id }, select: { id: true } });
+                where.planningId = { in: mySessions.map(s => s.id) };
+            }
+
+            const absences = await prisma.absence.findMany({
+                where,
+                include: {
+                    student: { select: { name: true } },
+                    planning: { include: { module: { select: { name: true } } } },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+            });
+
+            // Monthly stats
+            const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+            const monthCount = await prisma.absence.count({
+                where: { ...where, createdAt: { gte: monthStart } },
+            });
+
+            if (absences.length === 0) {
+                await sendTelegramMessage(chatId, `❌ *Absences*\n\n✅ Aucune absence enregistrée !`);
+            } else {
+                let msg = `❌ *Absences récentes* (${monthCount} ce mois)\n\n`;
+                for (const a of absences) {
+                    const statusIcon = a.status === 'Absent' ? '🔴' : a.status === 'Late' ? '🟡' : '🟢';
+                    msg += `${statusIcon} ${a.student.name} — ${a.planning.module.name}\n`;
+                    msg += `   ${a.status}${a.justified ? ' ✅ Justifié' : ''} — ${fmtDate(a.createdAt)}\n\n`;
+                }
+                await sendTelegramMessage(chatId, msg);
+            }
+
+        } else if (text === '/progress') {
+            const user = await getLinkedUser();
+            if (!user) { await sendTelegramMessage(chatId, `❌ Compte non lié. Envoyez /start d'abord.`); res.json({ ok: true }); return; }
+
+            // Get groups the user belongs to (or all for admin/scolarite)
+            let groupIds: string[] = [];
+            if (user.role === 'Etudiant') {
+                const gs = await prisma.groupStudent.findMany({ where: { studentId: user.id }, select: { groupId: true } });
+                groupIds = gs.map(g => g.groupId);
+            } else if (user.role === 'Enseignant') {
+                // Get groups from their planning sessions
+                const sessions = await prisma.planning.findMany({ where: { teacherId: user.id }, select: { groupId: true } });
+                groupIds = [...new Set(sessions.map(s => s.groupId))];
+            } else {
+                // Admin/Scolarite: all groups
+                const allGroups = await prisma.group.findMany({ select: { id: true } });
+                groupIds = allGroups.map(g => g.id);
+            }
+
+            const progress = await prisma.progress.findMany({
+                where: { groupId: { in: groupIds } },
+                include: { module: { select: { name: true } }, group: { select: { name: true } } },
+                orderBy: { percentage: 'desc' },
+            });
+
+            if (progress.length === 0) {
+                await sendTelegramMessage(chatId, `📊 *Avancement*\n\nAucune donnée d'avancement disponible.`);
+            } else {
+                let msg = `📊 *Avancement des modules*\n\n`;
+                for (const p of progress) {
+                    const bar = '█'.repeat(Math.round(p.percentage / 10)) + '░'.repeat(10 - Math.round(p.percentage / 10));
+                    msg += `${p.module.name}\n`;
+                    msg += `${bar} ${p.percentage}% — ${p.group.name}\n\n`;
+                }
+                await sendTelegramMessage(chatId, msg);
+            }
+
         } else {
             await sendTelegramMessage(chatId,
-                `I only understand commands. Send /start to link your account or /help for more info.`
+                `Je comprends uniquement les commandes.\n\nEnvoyez /help pour la liste complète.`
             );
         }
 
