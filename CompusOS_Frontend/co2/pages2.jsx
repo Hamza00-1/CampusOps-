@@ -1510,6 +1510,28 @@ function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
     toast({type:'success', title:'Copied to clipboard'});
   };
 
+  const [telegramCode, setTelegramCode] = uSP2('');
+  const [linkingTg, setLinkingTg] = uSP2(false);
+
+  const linkTelegram = async () => {
+    if (!telegramCode.trim() || telegramCode.length !== 6) {
+      toast({type:'error', title:'Invalid code', desc:'Please enter the 6-digit code from the bot.'});
+      return;
+    }
+    setLinkingTg(true);
+    try {
+      await window.api.request('/telegram/link', {
+        method: 'POST',
+        body: { code: telegramCode }
+      });
+      toast({type:'success', title:'Telegram linked!', desc:'You will now receive notifications via Telegram and can use bot commands.'});
+      setTelegramCode('');
+    } catch (err) {
+      toast({type:'error', title:'Linking failed', desc: err.message || 'Invalid or expired code.'});
+    }
+    setLinkingTg(false);
+  };
+
   return (
     <>
       <div className="page-head">
@@ -1633,19 +1655,19 @@ function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
               <div className="setting-row">
                 <div>
                   <div className="t">Enable Telegram notifications</div>
-                  <div className="s">Receive instant alerts via our <strong>@CampusOpsBot</strong> on Telegram.</div>
+                  <div className="s">Receive instant alerts via our <strong>@UEMF_CampusOps_bot</strong> on Telegram.</div>
                 </div>
-                <button className="toggle" onClick={(e)=>{e.currentTarget.classList.toggle('on'); toast({type:'info', title:'Telegram setup', desc:'Open Telegram and message @CampusOpsBot with /start to link your account.'});}}></button>
+                <button className="toggle" onClick={(e)=>{e.currentTarget.classList.toggle('on'); toast({type:'info', title:'Telegram setup', desc:'Open Telegram and message @UEMF_CampusOps_bot with /start to link your account.'});}}></button>
               </div>
               <div className="setting-row" style={{background:'var(--hover)',borderRadius:8,padding:'10px 14px',margin:'8px 0'}}>
                 <div>
                   <div className="t" style={{fontSize:12}}>How to connect</div>
-                  <div className="s">1. Open Telegram → search <strong>@CampusOpsBot</strong><br/>2. Send <code>/start</code><br/>3. The bot will reply with a link code<br/>4. Paste the code below and click "Link"</div>
+                  <div className="s">1. Open Telegram → search <strong>@UEMF_CampusOps_bot</strong><br/>2. Send <code>/start</code><br/>3. The bot will reply with a link code<br/>4. Paste the code below and click "Link"</div>
                 </div>
               </div>
               <div style={{display:'flex',gap:8,marginBottom:4}}>
-                <input placeholder="Paste your Telegram link code…" style={{flex:1,fontSize:12.5}}/>
-                <button className="btn btn-primary btn-sm" onClick={()=>toast({type:'success',title:'Telegram linked!',desc:'You will now receive notifications via Telegram.'})}>Link</button>
+                <input value={telegramCode} onChange={e=>setTelegramCode(e.target.value)} placeholder="Paste your 6-digit Telegram link code…" style={{flex:1,fontSize:12.5}}/>
+                <button className="btn btn-primary btn-sm" disabled={linkingTg} onClick={linkTelegram}>{linkingTg ? '...' : 'Link'}</button>
               </div>
 
               <div style={{height:1,background:'var(--border)',margin:'16px 0'}}/>
