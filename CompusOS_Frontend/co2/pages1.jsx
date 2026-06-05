@@ -630,6 +630,39 @@ function Absences({ role, toast }) {
   const [filter, setFilter] = uSP('all');
   const [groupFilter, setGroupFilter] = uSP('all');
   const [marks, setMarks] = uSP({});
+  const [sessionId, setSessionId] = uSP(null);
+  const [sessions, setSessions] = uSP([]);
+  const [saving, setSaving] = uSP(false);
+
+  // Fetch today's sessions for the session picker
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.request('/planning/today');
+        if (res.data && res.data.length > 0) {
+          setSessions(res.data);
+          setSessionId(res.data[0].id);
+        }
+      } catch(e) { console.warn('Sessions fetch:', e.message); }
+    })();
+  }, []);
+
+  // Fetch existing absence records when session changes
+  React.useEffect(() => {
+    if (!sessionId) return;
+    (async () => {
+      try {
+        const res = await api.request(`/absences?sessionId=${sessionId}`);
+        if (res.data) {
+          const m = {};
+          res.data.forEach(a => {
+            m[a.studentId || a.student?.id] = a.status === 'Present' ? 'p' : a.status === 'Late' ? 'l' : 'a';
+          });
+          setMarks(m);
+        }
+      } catch(e) { console.warn('Absences fetch:', e.message); }
+    })();
+  }, [sessionId]);
 
   // Fixed student filter: use window._userGroups for etudiant
   let students = STUDENTS;
@@ -652,10 +685,45 @@ function Absences({ role, toast }) {
     return true;
   });
 
-  const setStatus = (sid, st) => {
+  const setStatus = async (sid, st) => {
     if (role==='etudiant') return;
     setMarks(m => ({...m, [sid]: st}));
-    toast({ type:'success', title:'Attendance updated', desc:`${st==='p'?'Present':st==='l'?'Late':'Absent'} marked.` });
+
+    // Persist to API if we have a session selected
+    if (sessionId) {
+      try {
+        const statusMap = { p: 'Present', l: 'Late', a: 'Absent' };
+        await api.request('/absences', {
+          method: 'POST',
+          body: { sessionId, studentId: sid, status: statusMap[st] }
+        });
+        toast({ type:'success', title:'Attendance saved', desc:`${statusMap[st]} marked and saved to database.` });
+      } catch(e) {
+        toast({ type:'success', title:'Attendance updated', desc:`${st==='p'?'Present':st==='l'?'Late':'Absent'} marked locally.` });
+      }
+    } else {
+      toast({ type:'success', title:'Attendance updated', desc:`${st==='p'?'Present':st==='l'?'Late':'Absent'} marked.` });
+    }
+  };
+
+  const saveAll = async () => {
+    if (!sessionId) {
+      toast({ type:'error', title:'No session selected', desc:'Select a session first to save attendance.' });
+      return;
+    }
+    setSaving(true);
+    try {
+      const statusMap = { p: 'Present', l: 'Late', a: 'Absent' };
+      const records = filtered.map(s => ({
+        studentId: s.id,
+        status: statusMap[marks[s.id] || defaultMark(s)]
+      }));
+      await api.request('/absences/bulk', { method: 'POST', body: { sessionId, records } });
+      toast({ type:'success', title:'All attendance saved', desc:`${records.length} records saved to database.` });
+    } catch(e) {
+      toast({ type:'error', title:'Save failed', desc: e.message });
+    }
+    setSaving(false);
   };
 
   const defaultMark = (s) => s.att>=85?'p':s.att>=70?'l':'a';
@@ -667,10 +735,22 @@ function Absences({ role, toast }) {
           <h1>{t('nav.Attendance')}</h1>
           <div className="sub">{lang==='fr'?'Suivi des présences':'Track attendance and absences'}</div>
         </div>
+        {role !== 'etudiant' && sessionId && (
+          <div className="page-actions">
+            <button className="btn btn-primary btn-sm" disabled={saving} onClick={saveAll}>
+              <Icon name="check" size={14}/>{saving ? '...' : (lang==='fr'?'Enregistrer tout':'Save all')}
+            </button>
+          </div>
+        )}
       </div>
       <div className="card">
         <div className="card-head">
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+            {role !== 'etudiant' && sessions.length > 0 && (
+              <select value={sessionId||''} onChange={e=>setSessionId(e.target.value)} style={{padding:'7px 10px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
+                {sessions.map(s => <option key={s.id} value={s.id}>{s.module?.name || 'Session'} — {new Date(s.startTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</option>)}
+              </select>
+            )}
             {role !== 'etudiant' && (
               <select value={groupFilter} onChange={e=>setGroupFilter(e.target.value)} style={{padding:'7px 10px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
                 <option value="all">All groups</option>
@@ -696,7 +776,7 @@ function Absences({ role, toast }) {
                       <span className="av av-sm" style={{background:s.color}}>{s.init}</span>
                       <div>
                         <div style={{fontWeight:600}}>{s.name}</div>
-                        <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{s.id}</div>
+                        <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{s.id.substring(0,8)}</div>
                       </div>
                     </div>
                   </td>

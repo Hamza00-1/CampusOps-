@@ -824,7 +824,30 @@ function Groups({ toast }){
   const [edit, setEdit] = uSP2(null);
   const [editForm, setEditForm] = uSP2({});
   const [addingG, setAddingG] = uSP2(false);
-  const [addGForm, setAddGForm] = uSP2({ id:'', name:'', branch: BRANCHES[0]?.name || '', year:'2024-25', students:0 });
+  const [addGForm, setAddGForm] = uSP2({ id:'', name:'', branch: BRANCHES[0]?.name || '', year:'2025-26', students:0 });
+  const [groups, setGroups] = uSP2(() => [...GROUPS_LIST]);
+  const [loading, setLoading] = uSP2(false);
+
+  // Fetch groups from API on mount
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.request('/groups');
+        if (res.data && res.data.length > 0) {
+          const mapped = res.data.map(g => ({
+            id: g.id,
+            name: g.name,
+            branch: g.branch?.name || BRANCHES[0]?.name || 'EIDIA',
+            branchId: g.branchId,
+            year: g.academicYear || '2025-26',
+            students: g._count?.students || g.students?.length || 0,
+          }));
+          setGroups(mapped);
+          window.GROUPS_LIST = mapped;
+        }
+      } catch(e) { console.warn('Groups fetch fallback:', e.message); }
+    })();
+  }, []);
 
   const openEdit = (g) => {
     setEditForm({ id: g.id, name: g.name, branch: g.branch, year: g.year, students: g.students });
@@ -832,32 +855,71 @@ function Groups({ toast }){
     setView(null);
   };
 
-  const saveEdit = () => {
-    const idx = GROUPS_LIST.findIndex(g => g.id === edit.id);
-    if(idx >= 0) Object.assign(GROUPS_LIST[idx], editForm);
-    toast({ type:'success', title:'Group updated', desc: editForm.name + ' has been saved.' });
-    setEdit(null);
+  const saveEdit = async () => {
+    setLoading(true);
+    try {
+      const body = { name: editForm.name, academicYear: editForm.year };
+      // Try to resolve branchId
+      const br = BRANCHES.find(b => b.name === editForm.branch);
+      if (br && br.id) body.branchId = br.id;
+      await api.request(`/groups/${edit.id}`, { method: 'PUT', body });
+      // Update local state
+      setGroups(prev => prev.map(g => g.id === edit.id ? { ...g, ...editForm } : g));
+      window.GROUPS_LIST = groups.map(g => g.id === edit.id ? { ...g, ...editForm } : g);
+      toast({ type:'success', title:'Group updated', desc: editForm.name + ' has been saved.' });
+      setEdit(null);
+    } catch(e) {
+      toast({ type:'error', title:'Update failed', desc: e.message });
+    }
+    setLoading(false);
   };
 
   const openAddG = () => {
-    setAddGForm({ id:'', name:'', branch: BRANCHES[0]?.name || '', year:'2024-25', students:0 });
+    setAddGForm({ id:'', name:'', branch: BRANCHES[0]?.name || '', year:'2025-26', students:0 });
     setAddingG(true);
   };
 
-  const saveNewGroup = () => {
-    if (!addGForm.id.trim() || !addGForm.name.trim()) {
-      toast({ type:'error', title:'ID and name are required' });
+  const saveNewGroup = async () => {
+    if (!addGForm.name.trim()) {
+      toast({ type:'error', title:'Name is required' });
       return;
     }
-    GROUPS_LIST.push({
-      id: addGForm.id,
-      name: addGForm.name,
-      branch: addGForm.branch,
-      year: addGForm.year,
-      students: parseInt(addGForm.students) || 0,
-    });
-    toast({ type:'success', title:'Group created', desc: addGForm.name + ' has been added.' });
-    setAddingG(false);
+    setLoading(true);
+    try {
+      const br = BRANCHES.find(b => b.name === addGForm.branch);
+      const body = {
+        name: addGForm.name,
+        academicYear: addGForm.year,
+        branchId: br?.id || BRANCHES[0]?.id,
+      };
+      const res = await api.request('/groups', { method: 'POST', body });
+      const newG = {
+        id: res.data.id,
+        name: res.data.name,
+        branch: addGForm.branch,
+        year: res.data.academicYear || addGForm.year,
+        students: 0,
+      };
+      setGroups(prev => [...prev, newG]);
+      window.GROUPS_LIST = [...groups, newG];
+      toast({ type:'success', title:'Group created', desc: addGForm.name + ' has been added.' });
+      setAddingG(false);
+    } catch(e) {
+      toast({ type:'error', title:'Create failed', desc: e.message });
+    }
+    setLoading(false);
+  };
+
+  const deleteGroup = async (g) => {
+    if (!confirm(`Delete group "${g.name}"?`)) return;
+    try {
+      await api.request(`/groups/${g.id}`, { method: 'DELETE' });
+      setGroups(prev => prev.filter(x => x.id !== g.id));
+      window.GROUPS_LIST = groups.filter(x => x.id !== g.id);
+      toast({ type:'success', title:'Group deleted', desc: g.name + ' removed.' });
+    } catch(e) {
+      toast({ type:'error', title:'Delete failed', desc: e.message });
+    }
   };
 
   const groupStudents = (g) => STUDENTS.filter(s => s.group === g.id || s.group === g.name);
@@ -876,11 +938,11 @@ function Groups({ toast }){
         </div>
       </div>
       <div className="grid-3">
-        {GROUPS_LIST.map(g => {
+        {groups.map(g => {
           const studs = groupStudents(g);
           return (
             <div key={g.id} className="card">
-              <div style={{fontSize:11,fontFamily:'var(--mono)',color:'var(--text-3)',fontWeight:600}}>{g.id}</div>
+              <div style={{fontSize:11,fontFamily:'var(--mono)',color:'var(--text-3)',fontWeight:600}}>{g.id.substring(0,8)}</div>
               <div style={{fontSize:16,fontWeight:700,marginTop:2}}>{g.name}</div>
               <div style={{fontSize:12,color:'var(--text-2)',marginTop:2}}>{g.branch} • {g.year}</div>
               <div style={{display:'flex',gap:14,marginTop:14,fontSize:12,color:'var(--text-2)'}}>
@@ -890,6 +952,7 @@ function Groups({ toast }){
               <div style={{marginTop:14,display:'flex',gap:6}}>
                 <button className="btn btn-ghost btn-sm" onClick={()=>setView(g)}><Icon name="eye" size={14}/>View</button>
                 <button className="btn btn-ghost btn-sm" onClick={()=>openEdit(g)}><Icon name="edit" size={14}/>{t('btn.edit')}</button>
+                <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={()=>deleteGroup(g)}><Icon name="trash" size={14}/></button>
               </div>
             </div>
           );
@@ -903,7 +966,7 @@ function Groups({ toast }){
             <div className="drawer-head">
               <div>
                 <div style={{fontSize:16,fontWeight:700}}>{view.name}</div>
-                <div style={{fontSize:12,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{view.id} • {view.branch}</div>
+                <div style={{fontSize:12,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{view.id.substring(0,8)} • {view.branch}</div>
               </div>
               <button className="tb-btn" onClick={()=>setView(null)}><Icon name="close" size={16}/></button>
             </div>
@@ -954,32 +1017,24 @@ function Groups({ toast }){
             <div className="modal-body">
               <div className="grid-2">
                 <div className="field">
-                  <label>Group ID</label>
-                  <input value={addGForm.id} onChange={e=>setAddGForm(f=>({...f,id:e.target.value}))} placeholder="e.g. CS-G2"/>
-                </div>
-                <div className="field">
                   <label>Name</label>
-                  <input value={addGForm.name} onChange={e=>setAddGForm(f=>({...f,name:e.target.value}))} placeholder="e.g. L3 Informatique C"/>
+                  <input value={addGForm.name} onChange={e=>setAddGForm(f=>({...f,name:e.target.value}))} placeholder="e.g. CS-G2"/>
                 </div>
                 <div className="field">
                   <label>Branch</label>
                   <select value={addGForm.branch} onChange={e=>setAddGForm(f=>({...f,branch:e.target.value}))}>
-                    {BRANCHES.map(b=><option key={b.code} value={b.name}>{b.name}</option>)}
+                    {BRANCHES.map(b=><option key={b.code||b.id} value={b.name}>{b.name}</option>)}
                   </select>
                 </div>
                 <div className="field">
                   <label>Academic year</label>
-                  <input value={addGForm.year} onChange={e=>setAddGForm(f=>({...f,year:e.target.value}))} placeholder="2024-25"/>
-                </div>
-                <div className="field" style={{gridColumn:'1/-1'}}>
-                  <label>Capacity</label>
-                  <input type="number" value={addGForm.students} onChange={e=>setAddGForm(f=>({...f,students:parseInt(e.target.value)||0}))} min="0"/>
+                  <input value={addGForm.year} onChange={e=>setAddGForm(f=>({...f,year:e.target.value}))} placeholder="2025-26"/>
                 </div>
               </div>
             </div>
             <div className="modal-foot">
               <button className="btn btn-ghost" onClick={()=>setAddingG(false)}>{t('btn.cancel')}</button>
-              <button className="btn btn-primary" onClick={saveNewGroup}>{t('btn.save')}</button>
+              <button className="btn btn-primary" disabled={loading} onClick={saveNewGroup}>{loading ? '...' : t('btn.save')}</button>
             </div>
           </div>
         </>
@@ -995,21 +1050,19 @@ function Groups({ toast }){
             </div>
             <div className="modal-body">
               <div className="grid-2">
-                <div className="field"><label>Group ID</label><input value={editForm.id||''} onChange={e=>setEditForm(f=>({...f,id:e.target.value}))}/></div>
                 <div className="field"><label>Name</label><input value={editForm.name||''} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))}/></div>
                 <div className="field">
                   <label>Branch</label>
                   <select value={editForm.branch||''} onChange={e=>setEditForm(f=>({...f,branch:e.target.value}))}>
-                    {BRANCHES.map(b=><option key={b.code} value={b.name}>{b.name}</option>)}
+                    {BRANCHES.map(b=><option key={b.code||b.id} value={b.name}>{b.name}</option>)}
                   </select>
                 </div>
                 <div className="field"><label>Academic year</label><input value={editForm.year||''} onChange={e=>setEditForm(f=>({...f,year:e.target.value}))}/></div>
-                <div className="field" style={{gridColumn:'1/-1'}}><label>Capacity</label><input type="number" value={editForm.students||0} onChange={e=>setEditForm(f=>({...f,students:parseInt(e.target.value)||0}))}/></div>
               </div>
             </div>
             <div className="modal-foot">
               <button className="btn btn-ghost" onClick={()=>setEdit(null)}>{t('btn.cancel')}</button>
-              <button className="btn btn-primary" onClick={saveEdit}>{t('btn.save')}</button>
+              <button className="btn btn-primary" disabled={loading} onClick={saveEdit}>{loading ? '...' : t('btn.save')}</button>
             </div>
           </div>
         </>
@@ -1017,6 +1070,8 @@ function Groups({ toast }){
     </>
   );
 }
+
+
 
 // ─── NOTIFICATIONS ───
 function Notifications({ role, toast, onNav }){
