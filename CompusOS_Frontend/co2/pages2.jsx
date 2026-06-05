@@ -502,7 +502,7 @@ function Users({ toast }){
   const [roleFilter, setRoleFilter] = uSP2('all');
   const [, force] = uSP2(0);
   const [inviting, setInviting] = uSP2(false);
-  const [inviteForm, setInviteForm] = uSP2({ name:'', email:'', role:'etudiant', branch: BRANCHES[0]?.name || '—', status:'active' });
+  const [inviteForm, setInviteForm] = uSP2({ name:'', email:'', role:'etudiant', branch: BRANCHES[0]?.name || '—', group: '', status:'active' });
   const [editingU, setEditingU] = uSP2(null);
   const [editForm, setEditForm] = uSP2({});
 
@@ -513,7 +513,7 @@ function Users({ toast }){
   });
 
   const openInvite = () => {
-    setInviteForm({ name:'', email:'', role:'etudiant', branch: BRANCHES[0]?.name || '—', status:'active' });
+    setInviteForm({ name:'', email:'', role:'etudiant', branch: BRANCHES[0]?.name || '—', group: window.GROUPS_LIST?.[0]?.id || '', status:'active' });
     setInviting(true);
   };
 
@@ -530,7 +530,7 @@ function Users({ toast }){
         const studs = res.data.filter(x => x.role === 'Etudiant');
         // Always replace — empty list is meaningful info
         replace(window.STUDENTS, studs.map(s => ({
-          id: s.id, name: s.name, group: s.group?.name || '—',
+          id: s.id, name: s.name, group: s.studentGroups?.[0]?.group?.name || '—',
           avg: 14, att: 90, status: 'active',
           init: s.name?.substring(0,2).toUpperCase() || '??', color: '#7CB342',
         })));
@@ -576,7 +576,7 @@ function Users({ toast }){
     const tempPassword = 'CampusOps' + Math.floor(100 + Math.random() * 900) + '!';
 
     try {
-      await window.api.request('/users', {
+      const createdUser = await window.api.request('/users', {
         method: 'POST',
         body: {
           name: inviteForm.name,
@@ -586,6 +586,19 @@ function Users({ toast }){
           branchId: branchId
         }
       });
+      
+      // If student and a group is selected, assign them
+      if (apiRole === 'Etudiant' && inviteForm.group) {
+        try {
+          await window.api.request(`/groups/${inviteForm.group}/students`, {
+            method: 'POST',
+            body: { studentId: createdUser.data.id }
+          });
+        } catch (groupErr) {
+          console.error("Failed to assign group", groupErr);
+          toast({ type:'error', title:'Group assignment failed', desc: groupErr.message });
+        }
+      }
       
       toast({ type:'success', title:'Invitation sent', desc: `${inviteForm.email} created with password: ${tempPassword}. Welcome email dispatched.` });
       setInviting(false);
@@ -741,6 +754,17 @@ function Users({ toast }){
                     {BRANCHES.map(b=><option key={b.code} value={b.name}>{b.name}</option>)}
                   </select>
                 </div>
+                {inviteForm.role === 'etudiant' && (
+                  <div className="field">
+                    <label>Group</label>
+                    <select value={inviteForm.group} onChange={e=>setInviteForm(f=>({...f,group:e.target.value}))}>
+                      <option value="">(Select a group)</option>
+                      {(window.GROUPS_LIST || [])
+                        .filter(g => inviteForm.branch === '—' || g.branch === inviteForm.branch)
+                        .map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className="field" style={{gridColumn:'1/-1'}}>
                   <label>Status</label>
                   <select value={inviteForm.status} onChange={e=>setInviteForm(f=>({...f,status:e.target.value}))}>
