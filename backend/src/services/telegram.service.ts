@@ -133,6 +133,21 @@ export async function verifyTelegramBot(): Promise<boolean> {
         const data = await httpsPost(url, {});
         if (data.ok) {
             logger.info(`🤖 Telegram Bot connected: @${data.result.username}`);
+            
+            // Set the bot commands menu
+            const commandsUrl = `${TELEGRAM_API}${env.TELEGRAM_BOT_TOKEN}/setMyCommands`;
+            await httpsPost(commandsUrl, {
+                commands: [
+                    { command: 'start', description: 'Link your CampusOps account' },
+                    { command: 'today', description: 'View today\'s schedule' },
+                    { command: 'week', description: 'View your weekly schedule' },
+                    { command: 'absence', description: 'Check your absence records' },
+                    { command: 'progress', description: 'View academic progress & grades' },
+                    { command: 'help', description: 'List all commands' }
+                ]
+            });
+            logger.info(`🤖 Telegram Bot commands menu registered.`);
+            
             return true;
         }
         logger.warn(`🤖 Telegram Bot token invalid: ${data.description}`);
