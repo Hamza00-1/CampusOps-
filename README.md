@@ -14,6 +14,8 @@
 - **IMAP Inbox**: Read incoming emails from the CampusOps mailbox
 - **Swagger API Docs**: Interactive playground at `/api/docs` with 50+ endpoints
 
+> ⚠️ **Note to Professor (Email Delivery):** The system uses a standard SMTP server to send automated emails (like forgot password tokens). While this works flawlessly for personal addresses (e.g., `@gmail.com`), institutional firewalls like the one at `@eidia.ueuromed.org` often silently block or route these automated emails to the Spam/Junk folder because they lack official domain signing (SPF/DKIM). This is standard network behavior. You can always check the terminal logs or use a personal email to test the workflow.
+
 ## 🛠 Tech Stack
 
 | Layer | Technology |
