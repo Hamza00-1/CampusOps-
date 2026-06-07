@@ -11,92 +11,71 @@ const DEMO_CREDS = {
 function Login({ onAuth }) {
   const { t, lang, setLang } = useI18n();
 
-  // ── Detect reset token in URL ──
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlResetToken = urlParams.get('reset_token');
+  // Detect reset token in URL
+  const urlResetToken = new URLSearchParams(window.location.search).get('reset_token') || '';
 
   // view: 'login' | 'forgot' | 'reset'
-  const [view, setView] = uSL(urlResetToken ? 'reset' : 'login');
+  const [view, setView]           = uSL(urlResetToken ? 'reset' : 'login');
 
   // Login state
-  const [role, setRole]   = uSL('admin');
-  const [email, setEmail] = uSL(DEMO_CREDS.admin.email);
-  const [pwd, setPwd]     = uSL(DEMO_CREDS.admin.password);
+  const [role, setRole]           = uSL('admin');
+  const [email, setEmail]         = uSL(DEMO_CREDS.admin.email);
+  const [pwd, setPwd]             = uSL(DEMO_CREDS.admin.password);
 
   // Forgot state
   const [forgotEmail, setForgotEmail] = uSL('');
   const [forgotSent, setForgotSent]   = uSL(false);
 
   // Reset state
-  const [resetToken, setResetToken]   = uSL(urlResetToken || '');
-  const [resetPwd, setResetPwd]       = uSL('');
+  const [resetToken, setResetToken]     = uSL(urlResetToken);
+  const [resetPwd, setResetPwd]         = uSL('');
   const [resetConfirm, setResetConfirm] = uSL('');
-  const [resetDone, setResetDone]     = uSL(false);
+  const [resetDone, setResetDone]       = uSL(false);
 
   // Shared
-  const [loading, setLoading] = uSL(false);
-  const [error, setError]     = uSL('');
-  const [info, setInfo]       = uSL('');
+  const [loading, setLoading]     = uSL(false);
+  const [error, setError]         = uSL('');
 
   uEL(() => {
     const c = DEMO_CREDS[role];
     if (c) { setEmail(c.email); setPwd(c.password); }
   }, [role]);
 
-  // ── Login submit ──
+  // ── Login ──
   const submitLogin = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const res = await window.api.request('/auth/login', {
-        method: 'POST',
-        body: { email, password: pwd },
-        noAuth: true,
-      });
+      const res = await window.api.request('/auth/login', { method: 'POST', body: { email, password: pwd }, noAuth: true });
       window.api.setTokens(res.data.accessToken, res.data.refreshToken);
       const userRole = (res.data.user.role || role).toLowerCase();
-      ROLES[userRole] = {
-        id: userRole, label: res.data.user.role,
-        name: res.data.user.name, email: res.data.user.email,
-        color: ROLES[userRole]?.color || '#5FA83C',
-      };
+      ROLES[userRole] = { id: userRole, label: res.data.user.role, name: res.data.user.name, email: res.data.user.email, color: ROLES[userRole]?.color || '#5FA83C' };
       onAuth(userRole);
     } catch(err) {
       setError(err.message || 'Login failed. Check your credentials.');
     } finally { setLoading(false); }
   };
 
-  // ── Forgot password submit ──
+  // ── Forgot password ──
   const submitForgot = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      await window.api.request('/auth/forgot-password', {
-        method: 'POST',
-        body: { email: forgotEmail },
-        noAuth: true,
-      });
+      await window.api.request('/auth/forgot-password', { method: 'POST', body: { email: forgotEmail }, noAuth: true });
       setForgotSent(true);
     } catch(err) {
       setError(err.message || 'Failed to send reset email.');
     } finally { setLoading(false); }
   };
 
-  // ── Reset password submit ──
+  // ── Reset password ──
   const submitReset = async (e) => {
     e.preventDefault();
     setError('');
-    if (resetPwd !== resetConfirm) {
-      setError('Passwords do not match.'); return;
-    }
+    if (resetPwd !== resetConfirm) { setError('Passwords do not match.'); return; }
     setLoading(true);
     try {
-      await window.api.request('/auth/reset-password', {
-        method: 'POST',
-        body: { token: resetToken, password: resetPwd },
-        noAuth: true,
-      });
-      // Remove token from URL cleanly
+      await window.api.request('/auth/reset-password', { method: 'POST', body: { token: resetToken, password: resetPwd }, noAuth: true });
       window.history.replaceState({}, '', window.location.pathname);
       setResetDone(true);
     } catch(err) {
@@ -104,11 +83,10 @@ function Login({ onAuth }) {
     } finally { setLoading(false); }
   };
 
-  // ── HERO (shared left panel) ──
-  const Hero = () => (
+  const hero = (
     <div className="login-hero">
       <div className="logo" style={{alignItems:'center', gap:12}}>
-        <img src="uploads/UEMF.png" alt="UEMF Logo" style={{height: 48, objectFit: 'contain'}} />
+        <img src="uploads/UEMF.png" alt="UEMF Logo" style={{height:48, objectFit:'contain'}} />
         <div className="logo-txt">CampusOps</div>
       </div>
       <div className="hero-body">
@@ -120,15 +98,11 @@ function Login({ onAuth }) {
           <span className="hbadge">99.99% uptime</span>
         </div>
       </div>
-      <div className="foot">
-        <span>© 2025 CampusOps</span>
-        <span>Privacy</span>
-        <span>Terms</span>
-      </div>
+      <div className="foot"><span>© 2025 CampusOps</span><span>Privacy</span><span>Terms</span></div>
     </div>
   );
 
-  const LangToggle = () => (
+  const langToggle = (
     <div style={{display:'flex',justifyContent:'flex-end',marginBottom:18}}>
       <div className="segment" style={{padding:2}}>
         <button type="button" className={lang==='en'?'active':''} onClick={()=>setLang('en')}>EN</button>
@@ -137,128 +111,82 @@ function Login({ onAuth }) {
     </div>
   );
 
-  const ErrorBox = () => error ? (
-    <div style={{padding:'10px 12px',borderRadius:8,background:'#FEF2F2',color:'#DC2626',fontSize:12.5,marginBottom:12,border:'1px solid #FECACA',fontWeight:500}}>
-      {error}
-    </div>
+  const errorBox = error ? (
+    <div style={{padding:'10px 12px',borderRadius:8,background:'#FEF2F2',color:'#DC2626',fontSize:12.5,marginBottom:12,border:'1px solid #FECACA',fontWeight:500}}>{error}</div>
   ) : null;
 
-  // ── FORGOT PASSWORD view ──
-  if (view === 'forgot') {
-    return (
-      <div className="login">
-        <Hero />
-        <div className="login-form-wrap">
-          <form className="login-form" onSubmit={submitForgot}>
-            <LangToggle />
-            <h2>{lang==='fr' ? 'Mot de passe oublié' : 'Forgot password'}</h2>
-            <div className="sub" style={{marginBottom:18}}>
-              {lang==='fr'
-                ? 'Entrez votre email et nous vous enverrons un lien de réinitialisation.'
-                : 'Enter your email and we'll send you a reset link valid for 15 minutes.'}
+  // ── FORGOT VIEW ──
+  if (view === 'forgot') return (
+    <div className="login">
+      {hero}
+      <div className="login-form-wrap">
+        <form className="login-form" onSubmit={submitForgot}>
+          {langToggle}
+          <h2>{lang==='fr' ? 'Mot de passe oublié' : 'Forgot password'}</h2>
+          <div className="sub" style={{marginBottom:18}}>{lang==='fr' ? "Entrez votre email — nous vous enverrons un lien valide 15 minutes." : "Enter your email and we'll send a reset link valid for 15 minutes."}</div>
+          {errorBox}
+          {forgotSent ? (
+            <div style={{padding:16,borderRadius:10,background:'#F0FDF4',border:'1px solid #86EFAC',textAlign:'center'}}>
+              <div style={{fontSize:28,marginBottom:8}}>📧</div>
+              <div style={{fontWeight:600,color:'#166534',marginBottom:4}}>{lang==='fr' ? 'Email envoyé !' : 'Email sent!'}</div>
+              <div style={{fontSize:12.5,color:'#166534'}}>{lang==='fr' ? 'Vérifiez votre boîte mail et cliquez sur le lien dans les 15 minutes.' : 'Check your inbox and click the link within 15 minutes.'}</div>
             </div>
-            <ErrorBox />
-            {forgotSent ? (
-              <div style={{padding:'16px',borderRadius:10,background:'#F0FDF4',border:'1px solid #86EFAC',textAlign:'center'}}>
-                <div style={{fontSize:28,marginBottom:8}}>📧</div>
-                <div style={{fontWeight:600,color:'#166534',marginBottom:4}}>
-                  {lang==='fr' ? 'Email envoyé !' : 'Email sent!'}
-                </div>
-                <div style={{fontSize:12.5,color:'#166534'}}>
-                  {lang==='fr'
-                    ? 'Vérifiez votre boîte mail et cliquez sur le lien dans les 15 minutes.'
-                    : 'Check your inbox and click the link within 15 minutes.'}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="field">
-                  <label>{t('login.email')}</label>
-                  <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} required placeholder="your@email.ma" />
-                </div>
-                <button type="submit" className="btn btn-primary full" disabled={loading} style={{marginTop:8}}>
-                  {loading ? '...' : (lang==='fr' ? 'Envoyer le lien' : 'Send reset link')}
-                </button>
-              </>
-            )}
-            <div style={{textAlign:'center',marginTop:16}}>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={()=>{setView('login');setError('');setForgotSent(false);}}>
-                ← {lang==='fr' ? 'Retour à la connexion' : 'Back to login'}
-              </button>
-            </div>
-          </form>
-        </div>
+          ) : (
+            <>
+              <div className="field"><label>{t('login.email')}</label><input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} required placeholder="your@email.ma" /></div>
+              <button type="submit" className="btn btn-primary full" disabled={loading} style={{marginTop:8}}>{loading ? '...' : (lang==='fr' ? 'Envoyer le lien' : 'Send reset link')}</button>
+            </>
+          )}
+          <div style={{textAlign:'center',marginTop:16}}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={()=>{setView('login');setError('');setForgotSent(false);}}>← {lang==='fr' ? 'Retour à la connexion' : 'Back to login'}</button>
+          </div>
+        </form>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // ── RESET PASSWORD view ──
-  if (view === 'reset') {
-    return (
-      <div className="login">
-        <Hero />
-        <div className="login-form-wrap">
-          <form className="login-form" onSubmit={submitReset}>
-            <LangToggle />
-            <h2>{lang==='fr' ? 'Nouveau mot de passe' : 'Set new password'}</h2>
-            <div className="sub" style={{marginBottom:18}}>
-              {lang==='fr'
-                ? 'Choisissez un nouveau mot de passe sécurisé pour votre compte.'
-                : 'Choose a strong password for your account.'}
+  // ── RESET VIEW ──
+  if (view === 'reset') return (
+    <div className="login">
+      {hero}
+      <div className="login-form-wrap">
+        <form className="login-form" onSubmit={submitReset}>
+          {langToggle}
+          <h2>{lang==='fr' ? 'Nouveau mot de passe' : 'Set new password'}</h2>
+          <div className="sub" style={{marginBottom:18}}>{lang==='fr' ? 'Choisissez un nouveau mot de passe sécurisé.' : 'Choose a strong new password for your account.'}</div>
+          {errorBox}
+          {resetDone ? (
+            <div style={{padding:16,borderRadius:10,background:'#F0FDF4',border:'1px solid #86EFAC',textAlign:'center'}}>
+              <div style={{fontSize:28,marginBottom:8}}>✅</div>
+              <div style={{fontWeight:600,color:'#166534',marginBottom:4}}>{lang==='fr' ? 'Mot de passe réinitialisé !' : 'Password reset!'}</div>
+              <div style={{fontSize:12.5,color:'#166534',marginBottom:12}}>{lang==='fr' ? 'Vous pouvez vous connecter avec votre nouveau mot de passe.' : 'You can now log in with your new password.'}</div>
+              <button type="button" className="btn btn-primary btn-sm" onClick={()=>{setView('login');setError('');}}>{lang==='fr' ? 'Se connecter' : 'Go to login'}</button>
             </div>
-            <ErrorBox />
-            {resetDone ? (
-              <div style={{padding:'16px',borderRadius:10,background:'#F0FDF4',border:'1px solid #86EFAC',textAlign:'center'}}>
-                <div style={{fontSize:28,marginBottom:8}}>✅</div>
-                <div style={{fontWeight:600,color:'#166534',marginBottom:4}}>
-                  {lang==='fr' ? 'Mot de passe réinitialisé !' : 'Password reset!'}
-                </div>
-                <div style={{fontSize:12.5,color:'#166534',marginBottom:12}}>
-                  {lang==='fr' ? 'Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.' : 'You can now log in with your new password.'}
-                </div>
-                <button type="button" className="btn btn-primary btn-sm" onClick={()=>{setView('login');setError('');}}>
-                  {lang==='fr' ? 'Aller à la connexion' : 'Go to login'}
-                </button>
-              </div>
-            ) : (
-              <>
-                {!urlResetToken && (
-                  <div className="field">
-                    <label>{lang==='fr' ? 'Code de réinitialisation' : 'Reset token'}</label>
-                    <input value={resetToken} onChange={e=>setResetToken(e.target.value)} required placeholder="Paste token from email…" />
-                  </div>
-                )}
-                <div className="field">
-                  <label>{lang==='fr' ? 'Nouveau mot de passe' : 'New password'}</label>
-                  <input type="password" value={resetPwd} onChange={e=>setResetPwd(e.target.value)} required placeholder="Min. 8 chars, uppercase, number, symbol" />
-                </div>
-                <div className="field">
-                  <label>{lang==='fr' ? 'Confirmer le mot de passe' : 'Confirm password'}</label>
-                  <input type="password" value={resetConfirm} onChange={e=>setResetConfirm(e.target.value)} required />
-                </div>
-                <button type="submit" className="btn btn-primary full" disabled={loading} style={{marginTop:8}}>
-                  {loading ? '...' : (lang==='fr' ? 'Réinitialiser' : 'Reset password')}
-                </button>
-              </>
-            )}
-            <div style={{textAlign:'center',marginTop:16}}>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={()=>{setView('login');setError('');}}>
-                ← {lang==='fr' ? 'Retour à la connexion' : 'Back to login'}
-              </button>
-            </div>
-          </form>
-        </div>
+          ) : (
+            <>
+              {!urlResetToken && (
+                <div className="field"><label>{lang==='fr' ? 'Code de réinitialisation' : 'Reset token'}</label><input value={resetToken} onChange={e=>setResetToken(e.target.value)} required placeholder="Paste token from email…" /></div>
+              )}
+              <div className="field"><label>{lang==='fr' ? 'Nouveau mot de passe' : 'New password'}</label><input type="password" value={resetPwd} onChange={e=>setResetPwd(e.target.value)} required placeholder="Min. 8 chars, uppercase, number, symbol" /></div>
+              <div className="field"><label>{lang==='fr' ? 'Confirmer' : 'Confirm password'}</label><input type="password" value={resetConfirm} onChange={e=>setResetConfirm(e.target.value)} required /></div>
+              <button type="submit" className="btn btn-primary full" disabled={loading} style={{marginTop:8}}>{loading ? '...' : (lang==='fr' ? 'Réinitialiser' : 'Reset password')}</button>
+            </>
+          )}
+          <div style={{textAlign:'center',marginTop:16}}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={()=>{setView('login');setError('');}}> ← {lang==='fr' ? 'Retour' : 'Back to login'}</button>
+          </div>
+        </form>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // ── DEFAULT: LOGIN view ──
+  // ── DEFAULT LOGIN VIEW ──
   return (
     <div className="login">
-      <Hero />
+      {hero}
       <div className="login-form-wrap">
         <form className="login-form" onSubmit={submitLogin}>
-          <LangToggle />
+          {langToggle}
           <h2>{t('login.welcome')}</h2>
           <div className="sub">{lang==='fr' ? 'Connectez-vous pour continuer' : 'Sign in to continue to CampusOps'}</div>
 
@@ -270,18 +198,13 @@ function Login({ onAuth }) {
             ))}
           </div>
 
-          <ErrorBox />
+          {errorBox}
 
-          <div className="field">
-            <label>{t('login.email')}</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email" />
-          </div>
+          <div className="field"><label>{t('login.email')}</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email" /></div>
           <div className="field">
             <label style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <span>{t('login.password')}</span>
-              <button type="button"
-                style={{fontSize:11,color:'var(--accent)',background:'none',border:'none',cursor:'pointer',padding:0,fontFamily:'inherit'}}
-                onClick={()=>{setView('forgot');setError('');setForgotEmail(email);}}>
+              <button type="button" style={{fontSize:11,color:'var(--accent)',background:'none',border:'none',cursor:'pointer',padding:0,fontFamily:'inherit'}} onClick={()=>{setView('forgot');setError('');setForgotEmail(email);}}>
                 {lang==='fr' ? 'Mot de passe oublié ?' : 'Forgot password?'}
               </button>
             </label>
