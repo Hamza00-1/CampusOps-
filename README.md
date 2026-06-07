@@ -1,50 +1,83 @@
-# CampusOps
+<div align="center">
 
-**CampusOps** is a modern, distributed campus management platform built for **EIDIA — UEMF**. It handles planning, attendance, payments, academic progress, and notifications in one unified system — with a professional React dashboard and a full REST API backend.
+# 🎓 CampusOps
 
-## 🌟 Features
+**Plateforme Cloud-Native de Gestion Universitaire**
 
-- **Role-Based Dashboard**: Specialized interfaces for Admin, Scolarité, Enseignant, and Étudiant
-- **Academic Management**: Branch, Module, and Group hierarchy (EIDIA → CS-G1)
-- **Planning & Attendance**: Weekly schedule with real-time CRUD — sessions sync across all roles
-- **Financial Module**: Payment tracking (Inscription + Mensualité) with email receipts
-- **Progress Tracking**: Course completion percentage per module/group
-- **Telegram Bot**: `@UEMF_CampusOps_bot` — account linking, daily schedule queries
-- **Email Notifications**: SMTP (Gmail) — payment receipts, account invitations, alerts
-- **IMAP Inbox**: Read incoming emails from the CampusOps mailbox
-- **Swagger API Docs**: Interactive playground at `/api/docs` with 50+ endpoints
-
-> ⚠️ **Note to Professor (Email Delivery):** The system uses a standard SMTP server to send automated emails (like forgot password tokens). While this works flawlessly for personal addresses (e.g., `@gmail.com`), institutional firewalls like the one at `@eidia.ueuromed.org` often silently block or route these automated emails to the Spam/Junk folder because they lack official domain signing (SPF/DKIM). This is standard network behavior. You can always check the terminal logs or use a personal email to test the workflow.
-
-## 🛠 Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Node.js, Express, TypeScript, Zod validation |
-| **Database** | PostgreSQL 16 via Prisma ORM |
-| **Cache** | Redis 7 |
-| **Frontend** | React 18 (Babel), Outfit font, CSS variables |
-| **Email** | Nodemailer (SMTP + IMAP) |
-| **Bot** | Telegram Bot API |
-| **Infrastructure** | Docker Compose, Render/Railway deployment configs |
+*Projet de fin de semestre — Cloud & Applications Réparties*
+*EIDIA — Université Euro-Méditerranéenne de Fès (UEMF)*
 
 ---
 
-## 🚀 Quick Setup (5 minutes)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 
-### Prerequisites
-1. **[Node.js 20+](https://nodejs.org/)**
-2. **[Docker Desktop](https://www.docker.com/products/docker-desktop/)**
+</div>
 
-### Step 1: Clone & install
+---
+
+## 📋 Présentation
+
+**CampusOps** est une plateforme de gestion universitaire unifiée, développée pour **EIDIA – UEMF**. Elle centralise en un seul système la planification des cours, la gestion des absences, le suivi pédagogique, les paiements et les notifications omnicanales (Email + Telegram).
+
+Le projet respecte une architecture **Cloud-Native** : API REST sécurisée (Node.js + TypeScript), base de données relationnelle (PostgreSQL via Prisma ORM), cache distribué (Redis), et documentation interactive (Swagger).
+
+---
+
+## ✅ Fonctionnalités Implémentées
+
+| Domaine | Détail |
+|---------|--------|
+| 🔐 **Authentification** | JWT (Access + Refresh tokens), RBAC, Forgot Password (token Redis + email), bcrypt |
+| 👥 **Gestion des Utilisateurs** | CRUD complet, filtrage par rôle/branche, invitation par email |
+| 📅 **Planning** | Emplois du temps hebdomadaires, vue par rôle (admin / prof / étudiant) |
+| ✅ **Absences** | Marquage individuel & en masse, justifications, statistiques de présence |
+| 📊 **Avancement Pédagogique** | Suivi % par module/groupe, historique |
+| 💳 **Paiements** | Suivi scolarité + mensualités, reçus envoyés par email automatiquement |
+| 🔔 **Notifications** | Centre de notifications in-app (non-lues, marquer comme lu) |
+| 📧 **Email (SMTP + IMAP)** | Envoi via Gmail SMTP, lecture boîte de réception via IMAP |
+| 🤖 **Bot Telegram** | Liaison compte via OTP, `/today`, `/week`, `/absence`, `/progress`, `/help` |
+| 🔗 **Webhooks OpenClaw** | Triggers automatisés pour planning quotidien et notifications d'absences |
+| 📖 **Swagger API Docs** | Plus de 50 endpoints documentés et testables interactivement |
+
+---
+
+## 🛠️ Stack Technique
+
+| Couche | Technologie |
+|--------|-------------|
+| **API Backend** | Node.js 20, Express 4, TypeScript 5 |
+| **Validation** | Zod (schéma sur chaque route) |
+| **ORM / Base de données** | Prisma 6 + PostgreSQL 16 |
+| **Cache & Sessions** | Redis 7 (ioredis) |
+| **Sécurité** | JWT, bcrypt, Helmet, Rate-Limiting, RBAC |
+| **Email** | Nodemailer (SMTP sortant + IMAP lecture) |
+| **Bot** | Telegram Bot API (polling) |
+| **Frontend** | React 18 (Babel standalone), CSS variables, Outfit font |
+| **Documentation** | Swagger UI + JSDoc OpenAPI annotations |
+| **Infra** | Docker Compose (local), Render/Railway (cloud) |
+
+---
+
+## 🚀 Guide de Lancement Rapide
+
+> **Prérequis :** [Node.js 20+](https://nodejs.org/) et [Docker Desktop](https://www.docker.com/products/docker-desktop/) doivent être installés et en cours d'exécution.
+
+### Étape 1 — Cloner le dépôt
+
 ```bash
 git clone https://github.com/Hamza00-1/CampusOps-.git
-cd CampusOps-/backend
-npm install
+cd CampusOps-
 ```
 
-### Step 2: Create `.env`
-Create `backend/.env`:
+### Étape 2 — Créer le fichier de configuration
+
+Créez le fichier `backend/.env` avec le contenu suivant (copier-coller tel quel) :
+
 ```env
 NODE_ENV=development
 PORT=3000
@@ -63,120 +96,154 @@ RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=10000
 CORS_ORIGIN=*
 LOG_LEVEL=debug
-
-# Optional: SMTP for email receipts
-# SMTP_HOST=smtp.gmail.com
-# SMTP_PORT=587
-# SMTP_USER=your@gmail.com
-# SMTP_PASS=your-app-password
-# SMTP_FROM=CampusOps <your@gmail.com>
 ```
 
-### Step 3: Start database + seed + run
+### Étape 3 — Démarrer les bases de données (Docker)
+
 ```bash
+cd backend
 docker compose up -d db redis
+```
+
+> ✅ Attendez ~10 secondes que PostgreSQL et Redis soient complètement démarrés.
+
+### Étape 4 — Installer les dépendances et initialiser la base de données
+
+```bash
+npm install
 npx prisma generate
-npx prisma migrate dev
+npx prisma migrate dev --name init
 npm run db:seed
+```
+
+> ✅ La commande `db:seed` injecte automatiquement **5 comptes EIDIA réels**, des modules, des groupes, un planning et des données de test.
+
+### Étape 5 — Démarrer le serveur API
+
+```bash
 npm run dev
 ```
 
-### Step 4: Open the frontend
-Open **http://localhost:5173/CampusOps.html** in your browser.
+> ✅ Le serveur démarre sur **http://localhost:3000**. Vous devriez voir dans le terminal :
+> ```
+> 🐘 PostgreSQL connected
+> 🔴 Redis connected
+> 📧 SMTP transport ready
+> 🚀 CampusOps API running on port 3000
+> ```
 
-### Step 5: Login with EIDIA accounts
+### Étape 6 — Ouvrir le Frontend (dans un second terminal)
 
-| Email | Password | Role |
-|-------|----------|------|
-| `hamza.khchichine@eidia.ueuromed.org` | `CampusOps@2026` | **Admin** |
-| `karima.eddahhak@eidia.ueuromed.org` | `CampusOps@2026` | **Scolarité** |
-| `imad.adnane@eidia.ueuromed.org` | `CampusOps@2026` | **Enseignant** |
-| `siham.lyzoul@eidia.ueuromed.org` | `CampusOps@2026` | **Étudiant** |
-| `brahim.nakkar@eidia.ueuromed.org` | `CampusOps@2026` | **Étudiant** |
+```bash
+cd ..
+cd CompusOS_Frontend
+npx --yes serve -l 5173
+```
 
-> **API Docs**: http://localhost:3000/api/docs (Swagger UI — test all 50+ endpoints)
+Puis ouvrir dans le navigateur :
+
+> **👉 http://localhost:5173/CampusOps.html**
 
 ---
 
-## 📁 Project Structure
+## 🔑 Comptes de Test (pré-chargés)
+
+| Rôle | Email | Mot de passe |
+|------|-------|--------------|
+| **Administrateur** | `hamza.khchichine@eidia.ueuromed.org` | `CampusOps@2026` |
+| **Scolarité** | `karima.eddahhak@eidia.ueuromed.org` | `CampusOps@2026` |
+| **Enseignant** | `imad.adnane@eidia.ueuromed.org` | `CampusOps@2026` |
+| **Étudiant** | `siham.lyzoul@eidia.ueuromed.org` | `CampusOps@2026` |
+| **Étudiant** | `brahim.nakkar@eidia.ueuromed.org` | `CampusOps@2026` |
+
+> 💡 Les identifiants sont **pré-remplis automatiquement** sur la page de connexion. Cliquez simplement sur un rôle, puis sur "Se connecter".
+
+---
+
+## 📖 Documentation API (Swagger)
+
+Une interface interactive est disponible pour tester les 50+ endpoints sans outil tiers :
+
+> **👉 http://localhost:3000/api/docs**
+
+Elle permet d'exécuter directement des requêtes GET/POST/PUT/DELETE avec authentification Bearer JWT.
+
+---
+
+## ⚠️ Note sur la Livraison des Emails
+
+> Le système d'envoi d'emails fonctionne via un serveur SMTP Gmail standard. Les emails arrivent parfaitement sur des adresses personnelles (ex: `@gmail.com`, `@yahoo.com`). Cependant, **les pare-feu des adresses institutionnelles** comme `@eidia.ueuromed.org` bloquent ou filtrent souvent les emails automatisés provenant d'expéditeurs sans signature SPF/DKIM officielle. Ce comportement est standard en sécurité réseau.
+>
+> **Pour tester la fonctionnalité :** Utilisez une adresse Gmail personnelle comme email de compte dans la base de données. Les logs du terminal confirment également l'envoi avec succès côté serveur.
+
+---
+
+## 📁 Structure du Projet
 
 ```
 CampusOps-/
-├── README.md
-├── CONTRIBUTING.md            ← Team workflow & branching rules
-├── CampusOps_Roadmap.md       ← Full Phase 1-8 implementation plan
-├── DEPLOYMENT.md              ← Cloud deployment guide
-├── render.yaml                ← Render blueprint (auto-deploy)
-├── railway.json               ← Railway config
 │
-├── CompusOS_Frontend/         ← React Frontend
-│   ├── CampusOps.html         ← Entry point
+├── 📄 README.md                          ← Ce fichier
+├── 📄 DEPLOYMENT.md                      ← Guide de déploiement cloud
+├── 📄 CONTRIBUTING.md                    ← Conventions de développement
+│
+├── 📁 doc/
+│   ├── Cahier_des_Charges.md             ← Spécifications fonctionnelles & ERD
+│   ├── OpenClaw_Integration_Report.md    ← Rapport d'intégration webhooks
+│   └── Projet de fin de semestre.docx    ← Énoncé original du professeur
+│
+├── 📁 CompusOS_Frontend/
+│   ├── CampusOps.html                    ← Point d'entrée de l'application
 │   └── co2/
-│       ├── api.js             ← API client (JWT auto-refresh)
-│       ├── data.js            ← EIDIA seed data (fallback)
-│       ├── login.jsx          ← Login page
-│       ├── app.jsx            ← App shell + data sync
-│       ├── shell.jsx          ← Sidebar + topbar layout
-│       ├── pages1.jsx         ← Dashboard, Planning, Absences, Grades
-│       ├── pages2.jsx         ← Payments, Users, Groups, Notifications, Settings
-│       └── styles.css         ← Design system (dark/light themes)
+│       ├── api.js                        ← Client API (JWT auto-refresh)
+│       ├── data.js                       ← Données EIDIA & helpers i18n
+│       ├── login.jsx                     ← Page connexion + Forgot/Reset Password
+│       ├── app.jsx                       ← Racine React + synchronisation données
+│       ├── shell.jsx                     ← Sidebar + Topbar
+│       ├── pages1.jsx                    ← Dashboard, Planning, Absences, Notes
+│       ├── pages2.jsx                    ← Paiements, Utilisateurs, Groupes, Notifications, Paramètres
+│       └── styles.css                    ← Système de design (thèmes clair/sombre)
 │
-├── backend/
-│   ├── docker-compose.yml     ← PostgreSQL + Redis containers
-│   ├── Dockerfile             ← Multi-stage production build
-│   ├── prisma/
-│   │   ├── schema.prisma      ← 10 database models, 4 enums
-│   │   └── seed.ts            ← EIDIA real data seeder
-│   └── src/
-│       ├── config/            ← env, database, redis, swagger
-│       ├── middleware/        ← auth, RBAC, validation, logging, errors
-│       ├── modules/           ← 10 feature modules (auth, users, planning, etc.)
-│       ├── services/          ← email.service.ts, telegram.service.ts
-│       ├── utils/             ← JWT, hashing, response helpers
-│       ├── app.ts             ← Express app + security middleware
-│       └── index.ts           ← Bootstrap + graceful shutdown
-│
-└── doc/                       ← Project specification (PDF)
+└── 📁 backend/
+    ├── docker-compose.yml                ← PostgreSQL 16 + Redis 7
+    ├── Dockerfile                        ← Build multi-étapes (production)
+    ├── prisma/
+    │   ├── schema.prisma                 ← 10 modèles, 4 enums
+    │   └── seed.ts                       ← Données EIDIA réelles (5 comptes + planning)
+    └── src/
+        ├── config/                       ← env, database, redis, swagger
+        ├── middleware/                   ← auth JWT, RBAC, Zod validation, Winston logs
+        ├── modules/                      ← 10 modules (auth, users, planning, absences...)
+        ├── services/                     ← email.service.ts, telegram.service.ts
+        └── utils/                        ← jwt.ts, hash.ts, response.ts
 ```
 
 ---
 
-## 📡 API Endpoints (50+)
+## 📡 Résumé des Endpoints API
 
-| Module | Key Endpoints |
-|--------|--------------|
-| **Auth** | `POST /login`, `/register`, `/refresh`, `/logout`, `PUT /change-password`, `GET /profile` |
-| **Branches** | Full CRUD |
-| **Users** | CRUD + search + filter by role/branch |
-| **Modules** | CRUD (branch-scoped) |
-| **Groups** | CRUD + enroll/unenroll students |
-| **Planning** | CRUD + `/today` + `/week` (role-aware) |
-| **Absences** | Single + bulk marking, justify, attendance stats |
-| **Progress** | Upsert per module/group, group summary |
-| **Payments** | CRUD + overdue filter + student summary + **email receipts** |
-| **Notifications** | List + unread count + mark-read + mark-all-read |
-| **Telegram** | Webhook, link/unlink, test message |
-
----
-
-## 🏗️ Implementation Phases
-
-| Phase | Description | Status |
-|-------|------------|--------|
-| Phase 1 | Scaffolding & Infrastructure | ✅ Done |
-| Phase 2 | Database & Models (10 Prisma models) | ✅ Done |
-| Phase 3 | Authentication & Security (JWT + RBAC) | ✅ Done |
-| Phase 4 | Core CRUD APIs (50+ endpoints) | ✅ Done |
-| Phase 5 | Frontend Dashboard (React) | ✅ Done |
-| Phase 6 | Integrations (Email, Telegram, IMAP) | ✅ Done |
-| Phase 7 | API Docs & Testing | ✅ Done |
-| Phase 8 | Cloud Deployment Configs | ✅ Done |
+| Module | Endpoints clés |
+|--------|---------------|
+| **Auth** | `POST /login` · `/register` · `/refresh` · `/logout` · `POST /forgot-password` · `POST /reset-password` |
+| **Branches** | CRUD complet |
+| **Users** | CRUD + recherche + filtre par rôle/branche |
+| **Modules** | CRUD (par branche) |
+| **Groups** | CRUD + inscription/désinscription étudiants |
+| **Planning** | CRUD + `GET /today` + `GET /week` (adapté au rôle) |
+| **Absences** | Marquage individuel/masse, justification, statistiques |
+| **Progress** | Upsert par module/groupe, résumé de groupe |
+| **Payments** | CRUD + filtre retards + résumé étudiant + **reçu email automatique** |
+| **Notifications** | Liste + compteur non-lus + marquer lu/tous lus |
+| **Telegram** | Liaison/déliaison compte, message de test |
+| **OpenClaw** | `POST /trigger/daily-planning` · `POST /webhook` |
 
 ---
 
-## 👥 Team
+## 👤 Auteur
 
-- **Hamza Khchichine** — Lead Developer
-- Built at **EIDIA — UEMF** (Université Euro-Méditerranéenne de Fès)
+**Hamza Khchichine**
+Étudiant Ingénieur — EIDIA, Université Euro-Méditerranéenne de Fès (UEMF)
 
-> 🤝 See `CONTRIBUTING.md` for the team workflow and branching rules.
+---
+
+*Projet réalisé dans le cadre du module Cloud Computing & Applications Réparties — 2025/2026*
