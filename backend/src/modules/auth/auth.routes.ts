@@ -7,6 +7,8 @@ import {
     loginSchema,
     refreshTokenSchema,
     changePasswordSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
 } from './auth.schemas';
 
 // ============================================
@@ -179,5 +181,60 @@ router.put('/change-password', authenticate, validate({ body: changePasswordSche
  *         description: Not authenticated
  */
 router.get('/profile', authenticate, authController.getProfile);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Request a password reset link
+ *     description: Sends an email with a reset link valid for 15 minutes. Always returns 200 to prevent email enumeration.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: student@uemf.ma
+ *     responses:
+ *       200:
+ *         description: Reset link sent (always, regardless of whether email exists)
+ */
+router.post('/forgot-password', validate({ body: forgotPasswordSchema }), authController.forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Reset password using a token
+ *     description: Applies the new password. Token is invalidated immediately after use (one-time only).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, password]
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: The reset token from the email link
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 example: NewPass123!
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Token is invalid or expired
+ */
+router.post('/reset-password', validate({ body: resetPasswordSchema }), authController.resetPassword);
 
 export default router;

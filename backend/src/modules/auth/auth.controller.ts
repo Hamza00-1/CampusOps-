@@ -89,6 +89,33 @@ export class AuthController {
             next(error);
         }
     }
+
+    /**
+     * POST /api/auth/forgot-password
+     * Public endpoint — sends a reset link to the user's email.
+     */
+    async forgotPassword(req: Request, res: Response, next: NextFunction) {
+        try {
+            const result = await authService.forgotPassword(req.body.email);
+            res.json(successResponse(result, result.message));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
+     * POST /api/auth/reset-password
+     * Public endpoint — applies the new password using a valid reset token.
+     */
+    async resetPassword(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { token, password } = req.body;
+            const result = await authService.resetPassword(token, password);
+            res.json(successResponse(result, result.message));
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 export const authController = new AuthController();

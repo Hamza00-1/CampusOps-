@@ -4,6 +4,11 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken, hashToken } from
 import { ApiError } from '../../middleware/errorHandler';
 import { AuthPayload } from '../../types';
 import { RegisterInput, LoginInput } from './auth.schemas';
+import { getRedisClient } from '../../config/redis';
+import { sendEmail } from '../../services/email.service';
+import { env } from '../../config/env';
+import { logger } from '../../middleware/logger';
+import crypto from 'crypto';
 
 // ============================================
 // Auth Service — Business Logic
@@ -258,6 +263,63 @@ export class AuthService {
         }
 
         return user;
+    }
+    /**
+     * Forgot password — generate a reset token and email it to the user.
+     * Uses Redis to store token with 15 minute TTL.
+     */
+    async forgotPassword(email: string) {
+        // Find user — always return success to avoid email enumeration
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (user) {
+            const token = crypto.randomBytes(32).toString('hex');
+            const redis = getRedisClient();
+            // Store hashed token in Redis keyed by userId, expire in 15 min
+            await redis.setex(`pwd_reset:${token}`, 900, user.id);
+
+            const loginUrl = env.APP_URL?.endsWith('.html') ? env.APP_URL : `${env.APP_URL}/CampusOps.html`;
+            const resetUrl = `${loginUrl}?reset_token=${token}`;
+
+            sendEmail({
+                to: user.email,
+                subject: 'CampusOps — Reset your password',
+                body: `Hello ${user.name},\n\nYou requested a password reset.\n\nClick the link below to set a new password (valid for 15 minutes):\n\n${resetUrl}\n\nIf you did not request this, you can ignore this email.\n\nBest regards,\nCampusOps Administration`,
+                type: 'info',
+            }).catch(() => {});
+
+            logger.info(`🔑 Password reset token sent to ${email}`);
+        }
+
+        // Always return the same response (don't reveal whether email exists)
+        return { message: 'If this email exists, a reset link has been sent.' };
+    }
+
+    /**
+     * Reset password — validate the token from Redis and update password.
+     */
+    async resetPassword(token: string, newPassword: string) {
+        const redis = getRedisClient();
+        const userId = await redis.get(`pwd_reset:${token}`);
+
+        if (!userId) {
+            throw ApiError.badRequest('Reset token is invalid or has expired.');
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) throw ApiError.notFound('User not found');
+
+        const passwordHash = await hashPassword(newPassword);
+        await prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash, refreshToken: null }, // Force re-login everywhere
+        });
+
+        // Invalidate the token immediately (one-time use)
+        await redis.del(`pwd_reset:${token}`);
+
+        logger.info(`🔑 Password reset successful for userId=${userId}`);
+        return { message: 'Password has been reset successfully. Please login.' };
     }
 }
 
