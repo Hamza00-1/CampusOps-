@@ -239,10 +239,17 @@ CampusOps-/
 
 ---
 
-## 👤 Auteur
+## 👥 Équipe du Projet
 
-**Hamza Khchichine**
-Étudiant Ingénieur — EIDIA, Université Euro-Méditerranéenne de Fès (UEMF)
+| Nom | Rôle |
+|-----|------|
+| **Hamza Khchichine** | Lead Developer — Architecture, Backend, Frontend |
+| **Brahim Nakkar** | Développeur — Intégration & Tests |
+| **Karima Ed Dahhak** | Développeur — Gestion Scolarité & Paiements |
+| **Imad Adnane** | Développeur — Module Enseignant & Planning |
+| **Siham Lyzoul** | Développeur — Interface Étudiant & Notifications |
+
+*EIDIA — Université Euro-Méditerranéenne de Fès (UEMF)*
 
 ---
 
