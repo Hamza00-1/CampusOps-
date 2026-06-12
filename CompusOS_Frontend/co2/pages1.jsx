@@ -645,6 +645,27 @@ function Absences({ role, toast }) {
   const [sessions, setSessions] = uSP([]);
   const [saving, setSaving] = uSP(false);
 
+  // Student's own attendance. The teacher/admin grid relies on /users (which
+  // students can't access — 403), so an etudiant gets a dedicated view fed by
+  // their own absence records + stats, which they ARE allowed to read.
+  const [myAbs, setMyAbs] = uSP([]);
+  const [myStats, setMyStats] = uSP(null);
+  React.useEffect(() => {
+    if (role !== 'etudiant') return;
+    const uid = window._userId;
+    if (!uid) return;
+    (async () => {
+      try {
+        const [recs, stats] = await Promise.all([
+          api.request('/absences?studentId=' + uid),
+          api.request('/absences/stats/' + uid),
+        ]);
+        setMyAbs(recs.data || []);
+        setMyStats(stats.data || null);
+      } catch (e) { console.warn('My attendance fetch:', e.message); }
+    })();
+  }, [role]);
+
   // Fetch today's sessions for the session picker
   React.useEffect(() => {
     (async () => {
@@ -738,6 +759,55 @@ function Absences({ role, toast }) {
   };
 
   const defaultMark = (s) => s.att>=85?'p':s.att>=70?'l':'a';
+
+  // ── Student view: their own attendance record + stats ──
+  if (role === 'etudiant') {
+    const rate = myStats ? myStats.attendanceRate : null;
+    const rateColor = rate==null ? 'var(--text-3)' : rate>=85?'var(--green)':rate>=70?'var(--orange)':'var(--red)';
+    const statusLabel = (st) => st==='Present' ? (lang==='fr'?'Présent':'Present')
+      : st==='Late' ? (lang==='fr'?'Retard':'Late') : (lang==='fr'?'Absent':'Absent');
+    const records = [...myAbs].sort((a,b) =>
+      new Date(b.session?.startTime||b.createdAt) - new Date(a.session?.startTime||a.createdAt));
+    return (
+      <>
+        <div className="page-head">
+          <div>
+            <h1>{t('nav.Attendance')}</h1>
+            <div className="sub">{lang==='fr'?'Mon assiduité':'My attendance record'}</div>
+          </div>
+        </div>
+        {myStats && (
+          <div className="grid-4" style={{marginBottom:16}}>
+            <div className="stat"><div className="stat-v" style={{color:rateColor}}>{rate}%</div><div className="stat-l">{lang==='fr'?'Taux de présence':'Attendance rate'}</div></div>
+            <div className="stat"><div className="stat-v" style={{color:'var(--green)'}}>{myStats.present}</div><div className="stat-l">{lang==='fr'?'Présences':'Present'}</div></div>
+            <div className="stat"><div className="stat-v" style={{color:'var(--orange)'}}>{myStats.late}</div><div className="stat-l">{lang==='fr'?'Retards':'Late'}</div></div>
+            <div className="stat"><div className="stat-v" style={{color:'var(--red)'}}>{myStats.absent}</div><div className="stat-l">{lang==='fr'?'Absences':'Absences'}</div></div>
+          </div>
+        )}
+        <div className="card">
+          <div className="card-head"><div className="meta">{records.length} {lang==='fr'?'séances':'records'}</div></div>
+          <table className="tbl">
+            <thead><tr><th>{lang==='fr'?'Date':'Date'}</th><th>Module</th><th>{lang==='fr'?'Salle':'Room'}</th><th>{lang==='fr'?'Statut':'Status'}</th></tr></thead>
+            <tbody>
+              {records.length===0 && <tr><td colSpan={4}><div className="empty">{lang==='fr'?'Aucun enregistrement de présence pour le moment.':'No attendance records yet.'}</div></td></tr>}
+              {records.map(a => {
+                const cls = a.status==='Present'?'paid':a.status==='Late'?'partial':'overdue';
+                const d = new Date(a.session?.startTime || a.createdAt);
+                return (
+                  <tr key={a.id} className={a.status==='Absent'?'absent-row':''}>
+                    <td>{d.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'short'})}</td>
+                    <td style={{fontWeight:600}}>{a.session?.module?.name || '—'}</td>
+                    <td style={{color:'var(--text-3)'}}>{a.session?.room || '—'}</td>
+                    <td><span className={`pill ${cls}`}><span className="d"></span>{statusLabel(a.status)}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
