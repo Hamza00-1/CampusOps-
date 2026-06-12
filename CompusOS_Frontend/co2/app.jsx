@@ -70,18 +70,38 @@ function App() {
           students: b._count?.users || 0, groups: b._count?.groups || 0, color: '#5FA83C',
         })));
       }
+      // USERS_LIST comes from /users (Admin/Scolarite only — others get 403).
       if (us.status==='fulfilled' && us.value.data?.length) {
         replace(window.USERS_LIST, us.value.data.map(x => ({
           id: x.id, name: x.name, role: (x.role || '').toLowerCase(),
           email: x.email, branch: x.branch?.name || '—', status: 'active',
           init: x.name?.substring(0,2).toUpperCase() || '??', color: '#5FA83C',
         })));
-        const studs = us.value.data.filter(x => x.role === 'Etudiant');
-        replace(window.STUDENTS, studs.map(s => ({
-          id: s.id, name: s.name, group: s.group?.name || '—',
-          avg: 14, att: 90, status: 'active',
-          init: s.name?.substring(0,2).toUpperCase() || '??', color: '#7CB342',
-        })));
+      }
+      // STUDENTS roster: derived from group rosters via /groups/:id, NOT /users.
+      // /users is Admin/Scolarite-only and omits the group, so teachers/students
+      // got no roster (and admins got group '—'). /groups/:id is readable by all
+      // roles and returns the real enrolled students (id, name, role) per group.
+      if (gp.status==='fulfilled' && gp.value.data?.length) {
+        const rosters = await Promise.all(gp.value.data.map(g =>
+          window.api.request('/groups/' + g.id).then(r => r.data).catch(() => null)
+        ));
+        const seen = new Set();
+        const studs = [];
+        rosters.forEach(grp => {
+          (grp?.students || []).forEach(gs => {
+            const u = gs.student || gs;
+            if (u && u.role === 'Etudiant' && !seen.has(u.id)) {
+              seen.add(u.id);
+              studs.push({
+                id: u.id, name: u.name, group: grp.name,
+                avg: 14, att: 90, status: 'active',
+                init: (u.name || '??').substring(0,2).toUpperCase(), color: '#7CB342',
+              });
+            }
+          });
+        });
+        if (studs.length) replace(window.STUDENTS, studs);
       }
       if (py.status==='fulfilled' && py.value.data?.length) {
         replace(window.PAYMENTS, py.value.data.map(p => ({
