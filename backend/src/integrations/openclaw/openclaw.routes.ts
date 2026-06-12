@@ -71,4 +71,20 @@ router.post(
     openclawController.triggerOverdueScan,
 );
 
+/** @swagger
+ * /api/openclaw/trigger/mail-inject:
+ *   post:
+ *     tags: [OpenClaw]
+ *     summary: Scan IMAP inbox and inject matching emails as notifications (Admin)
+ *     description: Reads the last 20 emails and creates in-app notifications when keywords like "absence justifiée" or "paiement reçu" are detected in subject/body.
+ *     security: [{ BearerAuth: [] }]
+ *     responses:
+ *       200: { description: Injection summary } */
+router.post(
+    '/trigger/mail-inject',
+    authenticate,
+    requireRole('Admin'),
+    openclawController.triggerMailInject,
+);
+
 export default router;

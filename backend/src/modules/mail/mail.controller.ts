@@ -17,6 +17,13 @@ export class MailController {
             res.status(202).json(successResponse(result, 'Email sent'));
         } catch (e) { next(e); }
     }
+
+    async inject(req: Request, res: Response, next: NextFunction) {
+        try {
+            const result = await mailService.inject();
+            res.json(successResponse(result, 'Mail injection completed'));
+        } catch (e) { next(e); }
+    }
 }
 
 export const mailController = new MailController();

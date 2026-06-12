@@ -157,14 +157,14 @@ export async function handleWebhook(req: Request, res: Response, next: NextFunct
             if (user.role === 'Enseignant') {
                 // Absences from their sessions
                 const mySessions = await prisma.planning.findMany({ where: { teacherId: user.id }, select: { id: true } });
-                where.planningId = { in: mySessions.map(s => s.id) };
+                where.sessionId = { in: mySessions.map(s => s.id) };
             }
 
             const absences = await prisma.absence.findMany({
                 where,
                 include: {
                     student: { select: { name: true } },
-                    planning: { include: { module: { select: { name: true } } } },
+                    session: { include: { module: { select: { name: true } } } },
                 },
                 orderBy: { createdAt: 'desc' },
                 take: 10,
@@ -182,8 +182,9 @@ export async function handleWebhook(req: Request, res: Response, next: NextFunct
                 let msg = `❌ *Absences récentes* (${monthCount} ce mois)\n\n`;
                 for (const a of absences) {
                     const statusIcon = a.status === 'Absent' ? '🔴' : a.status === 'Late' ? '🟡' : '🟢';
-                    msg += `${statusIcon} ${a.student.name} — ${a.planning.module.name}\n`;
-                    msg += `   ${a.status}${a.justified ? ' ✅ Justifié' : ''} — ${fmtDate(a.createdAt)}\n\n`;
+                    const moduleName = (a as any).session?.module?.name || 'Module inconnu';
+                    msg += `${statusIcon} ${a.student.name} — ${moduleName}\n`;
+                    msg += `   ${a.status}${a.justificationDocUrl ? ' ✅ Justifié' : ''} — ${fmtDate(a.createdAt)}\n\n`;
                 }
                 await sendTelegramMessage(chatId, msg);
             }

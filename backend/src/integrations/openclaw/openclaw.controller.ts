@@ -7,7 +7,8 @@ import { successResponse } from '../../utils/response';
 import { runDailyPlanningNotifications } from './daily-planning.job';
 import { prisma } from '../../config/database';
 import { sendEmail } from '../../services/email.service';
-import { sendTelegramMessage } from '../../services/telegram.service';
+import { sendTelegramMessage, isTelegramConfigured } from '../../services/telegram.service';
+import { fetchLatestMessages, isImapConfigured } from '../email/imap';
 
 /**
  * Constant-time HMAC verification for the X-OpenClaw-Signature header.
@@ -46,7 +47,7 @@ async function runAbsenceNotification(absenceId?: string) {
         where,
         include: {
             student: { select: { id: true, name: true, email: true, telegramChatId: true } },
-            planning: { include: { module: { select: { name: true } } } },
+            session: { include: { module: { select: { name: true } } } },
         },
     });
 
@@ -54,7 +55,7 @@ async function runAbsenceNotification(absenceId?: string) {
     let telegramSent = 0;
 
     for (const a of absences) {
-        const moduleName = a.planning?.module?.name || 'Unknown';
+        const moduleName = (a as any).session?.module?.name || 'Unknown';
         const date = a.createdAt.toLocaleDateString('fr-FR');
 
         // Email notification
@@ -67,7 +68,7 @@ async function runAbsenceNotification(absenceId?: string) {
         if (emailOk) emailsSent++;
 
         // Telegram notification
-        if (a.student.telegramChatId) {
+        if (isTelegramConfigured() && a.student.telegramChatId) {
             const ok = await sendTelegramMessage(a.student.telegramChatId,
                 `⚠️ *Absence enregistrée*\n\n📚 ${moduleName}\n📅 ${date}\n❌ Statut: ${a.status}\n\nContactez la scolarité si c'est une erreur.`
             );
@@ -79,8 +80,8 @@ async function runAbsenceNotification(absenceId?: string) {
             data: {
                 userId: a.student.id,
                 title: `Absence — ${moduleName}`,
-                message: `Vous avez été marqué(e) absent(e) le ${date} pour ${moduleName}.`,
-                type: 'absence',
+                content: `Vous avez été marqué(e) absent(e) le ${date} pour ${moduleName}.`,
+                type: 'alert',
             },
         });
     }
@@ -131,8 +132,8 @@ async function runOverduePaymentScan() {
             data: {
                 userId: p.student.id,
                 title: `Paiement en retard — ${amount} MAD`,
-                message: `Votre ${p.planType} de ${amount} MAD (échéance ${dueDate}) est en retard.`,
-                type: 'payment',
+                content: `Votre ${p.planType} de ${amount} MAD (échéance ${dueDate}) est en retard.`,
+                type: 'alert',
             },
         });
         notificationsCreated++;
@@ -140,6 +141,57 @@ async function runOverduePaymentScan() {
 
     const summary = { overdueFound: overduePayments.length, emailsSent, telegramSent, notificationsCreated };
     logger.info(`🪝 Overdue payment scan: ${JSON.stringify(summary)}`);
+    return summary;
+}
+
+/**
+ * Workflow 4: Scan IMAP inbox and inject matching emails as internal notifications.
+ * Keywords like "absence justifiée" or "paiement reçu" create alerts for Admin/Scolarite.
+ */
+async function runMailInjectNotifications() {
+    if (!isImapConfigured()) {
+        logger.info('📬 Mail inject: IMAP not configured — skipping');
+        return { skipped: true, messagesScanned: 0, notificationsCreated: 0 };
+    }
+
+    const messages = await fetchLatestMessages(20);
+
+    const rules: Array<{ keywords: string[]; title: string; type: 'alert' | 'success' | 'info' }> = [
+        { keywords: ['absence justifi', 'justification'], title: 'Absence justifiée reçue', type: 'alert' },
+        { keywords: ['paiement reçu', 'paiement confirmé', 'payment received', 'payment confirmed'], title: 'Paiement reçu', type: 'success' },
+        { keywords: ['inscription', 'enrollment', 'demande d\'inscription'], title: 'Nouvelle demande d\'inscription', type: 'info' },
+        { keywords: ['retard', 'late notice'], title: 'Signalement retard reçu', type: 'alert' },
+    ];
+
+    const admins = await prisma.user.findMany({
+        where: { role: { in: ['Admin', 'Scolarite'] } },
+        select: { id: true },
+    });
+
+    let notificationsCreated = 0;
+
+    for (const msg of messages) {
+        const searchText = `${msg.subject} ${msg.snippet}`.toLowerCase();
+        for (const rule of rules) {
+            if (rule.keywords.some(k => searchText.includes(k))) {
+                for (const admin of admins) {
+                    await prisma.notification.create({
+                        data: {
+                            userId: admin.id,
+                            title: rule.title,
+                            content: `De : ${msg.from}\nObjet : ${msg.subject}\n\n${msg.snippet.slice(0, 200)}`,
+                            type: rule.type,
+                        },
+                    });
+                    notificationsCreated++;
+                }
+                break;
+            }
+        }
+    }
+
+    const summary = { messagesScanned: messages.length, notificationsCreated };
+    logger.info(`📬 Mail inject: ${JSON.stringify(summary)}`);
     return summary;
 }
 
@@ -168,6 +220,9 @@ export class OpenClawController {
                     break;
                 case 'payment.overdue.scan':
                     await runOverduePaymentScan();
+                    break;
+                case 'mail.inject':
+                    await runMailInjectNotifications();
                     break;
                 case 'health.ping':
                     break;
@@ -200,6 +255,14 @@ export class OpenClawController {
         try {
             const summary = await runOverduePaymentScan();
             res.json(successResponse(summary, 'Overdue payment scan completed'));
+        } catch (e) { next(e); }
+    }
+
+    /** POST /api/openclaw/trigger/mail-inject — scan inbox and inject email notifications (Admin only) */
+    async triggerMailInject(_req: Request, res: Response, next: NextFunction) {
+        try {
+            const summary = await runMailInjectNotifications();
+            res.json(successResponse(summary, 'Mail injection completed'));
         } catch (e) { next(e); }
     }
 }

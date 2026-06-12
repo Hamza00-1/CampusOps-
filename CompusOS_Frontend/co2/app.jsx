@@ -4,7 +4,7 @@ const { useState: uSA, useEffect: uEA } = React;
 const PAGE_TITLES = {
   dashboard:'Dashboard', planning:'Planning', absences:'Attendance', modules:'Modules',
   progress:'Progress', grades:'Grades', payments:'Payments', users:'Users', groups:'Groups',
-  branches:'Branches', notifications:'Notifications', settings:'Settings',
+  branches:'Branches', notifications:'Notifications', settings:'Settings', automation:'Automation',
 };
 
 function App() {
@@ -211,6 +211,7 @@ function App() {
           {page==='branches'      && <Branches toast={toast} />}
           {page==='notifications' && <Notifications role={auth} toast={toast} onNav={navigate} />}
           {page==='settings'      && <Settings role={auth} onLogout={handleLogout} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} toast={toast} />}
+          {page==='automation'    && <Automation toast={toast} />}
         </main>
       </div>
       <Toasts items={toasts} remove={removeT} />

@@ -38,6 +38,8 @@ const ICONS = {
   plus:     '<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   logout:   '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   chevron:  '<path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+  automation:'<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>',
+  telegram:  '<path d="M21 5L2 12.5l7 1M21 5l-5 15-7-6.5M21 5L9 13.5M9 13.5V19l3.5-3" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
 const NAV_GROUPS = [
@@ -57,6 +59,7 @@ const NAV_GROUPS = [
     { id:'groups',        label:'Groups',        icon:'groups',    roles:['admin','scolarite'] },
     { id:'branches',      label:'Branches',      icon:'branches',  roles:['admin'] },
     { id:'notifications', label:'Notifications', icon:'notifications', roles:['admin','scolarite','enseignant','etudiant'] },
+    { id:'automation',    label:'Automation',    icon:'automation',roles:['admin'] },
   ]},
 ];
 

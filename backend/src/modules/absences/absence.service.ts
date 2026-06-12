@@ -1,6 +1,9 @@
 import { prisma } from '../../config/database';
 import { ApiError } from '../../middleware/errorHandler';
 import { MarkAbsenceInput, MarkBulkInput, JustifyInput } from './absence.schemas';
+import { logger } from '../../middleware/logger';
+import { sendEmail } from '../../services/email.service';
+import { sendTelegramMessage, isTelegramConfigured } from '../../services/telegram.service';
 
 export class AbsenceService {
     private readonly include = {
@@ -32,10 +35,54 @@ export class AbsenceService {
         const existing = await prisma.absence.findFirst({
             where: { sessionId: data.sessionId, studentId: data.studentId },
         });
-        if (existing) {
-            return prisma.absence.update({ where: { id: existing.id }, data: { status: data.status }, include: this.include });
+        const absence = existing
+            ? await prisma.absence.update({ where: { id: existing.id }, data: { status: data.status }, include: this.include })
+            : await prisma.absence.create({ data, include: this.include });
+
+        // Fire-and-forget: notify student when marked Absent or Late
+        if (absence.status !== 'Present') {
+            void this.notifyAbsence(absence);
         }
-        return prisma.absence.create({ data, include: this.include });
+        return absence;
+    }
+
+    private async notifyAbsence(absence: { studentId: string; sessionId: string; status: string; createdAt: Date }) {
+        try {
+            const [studentFull, moduleName] = await Promise.all([
+                prisma.user.findUnique({ where: { id: absence.studentId }, select: { name: true, email: true, telegramChatId: true } }),
+                prisma.planning.findUnique({ where: { id: absence.sessionId }, include: { module: { select: { name: true } } } })
+                    .then(p => p?.module?.name || 'Module inconnu'),
+            ]);
+            if (!studentFull) return;
+
+            const label = absence.status === 'Late' ? 'retard' : 'absence';
+            const date = absence.createdAt.toLocaleDateString('fr-FR');
+
+            await prisma.notification.create({
+                data: {
+                    userId: absence.studentId,
+                    title: `${absence.status === 'Late' ? 'Retard' : 'Absence'} — ${moduleName}`,
+                    content: `Vous avez été marqué(e) ${label} le ${date} pour ${moduleName}.`,
+                    type: 'alert',
+                },
+            });
+
+            await sendEmail({
+                to: studentFull.email,
+                subject: `CampusOps — ${absence.status === 'Late' ? 'Retard' : 'Absence'} enregistré(e) (${moduleName})`,
+                body: `Bonjour ${studentFull.name},\n\nUn(e) ${label} a été enregistré(e) :\n\n📚 Module : ${moduleName}\n📅 Date : ${date}\n\nContactez votre enseignant ou la scolarité si c'est une erreur.\n\nCampusOps — EIDIA`,
+                type: 'alert',
+            });
+
+            if (isTelegramConfigured() && studentFull.telegramChatId) {
+                await sendTelegramMessage(
+                    studentFull.telegramChatId,
+                    `⚠️ *${absence.status === 'Late' ? 'Retard' : 'Absence'} enregistré(e)*\n\n📚 ${moduleName}\n📅 ${date}\n\nContactez la scolarité si c'est une erreur.`,
+                );
+            }
+        } catch (err: any) {
+            logger.error(`Absence auto-notify failed: ${err.message}`);
+        }
     }
 
     async markBulk(data: MarkBulkInput) {

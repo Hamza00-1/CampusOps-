@@ -1877,4 +1877,245 @@ function Settings({ role, onLogout, theme, setTheme, lang, setLang, toast }){
   );
 }
 
-Object.assign(window, { Payments, Users, Groups, Notifications, Progress, Settings });
+// ─── AUTOMATION (OpenClaw) ───
+function Automation({ toast }) {
+  const [results, setResults] = uSP2({});
+  const [loading, setLoading] = uSP2({});
+  const [lastRun, setLastRun] = uSP2({});
+
+  const workflows = [
+    {
+      id: 'daily-planning',
+      title: 'Planning du jour',
+      desc: 'Envoie le planning quotidien à tous les enseignants et étudiants par email, Telegram et notification in-app.',
+      schedule: 'Tous les jours à 7h00',
+      trigger: '/openclaw/trigger/daily-planning',
+      color: '#5FA83C',
+      icon: 'planning',
+      resultKeys: [
+        { k:'sessionCount',       label:'Sessions' },
+        { k:'teachersNotified',   label:'Enseignants notifiés' },
+        { k:'studentsNotified',   label:'Étudiants notifiés' },
+        { k:'emailsSent',         label:'Emails envoyés' },
+        { k:'telegramSent',       label:'Telegram envoyés' },
+      ],
+    },
+    {
+      id: 'absence-notify',
+      title: 'Notifications absences',
+      desc: 'Notifie chaque étudiant absent (24h) par email, Telegram et notification in-app.',
+      schedule: 'Déclenché à chaque absence enregistrée',
+      trigger: '/openclaw/trigger/absence-notify',
+      color: '#DC2626',
+      icon: 'absences',
+      resultKeys: [
+        { k:'absencesProcessed', label:'Absences traitées' },
+        { k:'emailsSent',        label:'Emails envoyés' },
+        { k:'telegramSent',      label:'Telegram envoyés' },
+      ],
+    },
+    {
+      id: 'overdue-scan',
+      title: 'Scan paiements en retard',
+      desc: 'Détecte les paiements en retard et envoie des rappels aux étudiants concernés.',
+      schedule: 'Tous les jours à minuit',
+      trigger: '/openclaw/trigger/overdue-scan',
+      color: '#F59E0B',
+      icon: 'payments',
+      resultKeys: [
+        { k:'overdueFound',          label:'Retards détectés' },
+        { k:'emailsSent',            label:'Emails envoyés' },
+        { k:'telegramSent',          label:'Telegram envoyés' },
+        { k:'notificationsCreated',  label:'Notifications créées' },
+      ],
+    },
+    {
+      id: 'mail-inject',
+      title: 'Injection emails entrants',
+      desc: 'Lit la boîte IMAP et transforme les emails contenant des mots-clés (absence justifiée, paiement reçu…) en notifications internes.',
+      schedule: 'Sur demande ou webhook OpenClaw',
+      trigger: '/openclaw/trigger/mail-inject',
+      color: '#7C3AED',
+      icon: 'notifications',
+      resultKeys: [
+        { k:'messagesScanned',       label:'Emails scannés' },
+        { k:'notificationsCreated',  label:'Notifications créées' },
+      ],
+    },
+  ];
+
+  const runWorkflow = async (wf) => {
+    setLoading(l => ({ ...l, [wf.id]: true }));
+    try {
+      const res = await window.api.request(wf.trigger, { method: 'POST' });
+      setResults(r => ({ ...r, [wf.id]: res.data }));
+      setLastRun(lr => ({ ...lr, [wf.id]: new Date().toLocaleTimeString('fr-FR') }));
+      toast({ type: 'success', title: `${wf.title} — exécuté`, desc: `Workflow terminé avec succès.` });
+    } catch (err) {
+      toast({ type: 'error', title: `Erreur — ${wf.title}`, desc: err.message });
+    }
+    setLoading(l => ({ ...l, [wf.id]: false }));
+  };
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Automation OpenClaw</h1>
+          <div className="sub">4 workflows automatisés — déclenchez-les manuellement ou laissez le cron les gérer</div>
+        </div>
+      </div>
+
+      {/* Info banner */}
+      <div style={{ background:'var(--surface-2,#F8FAFC)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px', marginBottom:20, display:'flex', alignItems:'center', gap:12, fontSize:13, color:'var(--text-2)' }}>
+        <Icon name="info" size={18} />
+        <span>OpenClaw appelle <code style={{background:'var(--surface-3,#F1F5F9)',padding:'1px 6px',borderRadius:4,fontSize:12}}>/api/openclaw/webhook</code> avec une signature HMAC-SHA256. Les triggers ci-dessous simulent ces appels manuellement.</span>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(340px,1fr))', gap:18 }}>
+        {workflows.map(wf => {
+          const res = results[wf.id];
+          const isLoading = loading[wf.id];
+          const ran = lastRun[wf.id];
+          return (
+            <div key={wf.id} className="card" style={{ padding:20, display:'flex', flexDirection:'column', gap:14, borderTop:`3px solid ${wf.color}` }}>
+              {/* Header */}
+              <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+                <div style={{ width:40, height:40, borderRadius:10, background:wf.color+'22', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:wf.color }}>
+                  <Icon name={wf.icon} size={20} />
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:14 }}>{wf.title}</div>
+                  <div style={{ fontSize:12, color:'var(--text-3)', marginTop:2 }}>{wf.desc}</div>
+                </div>
+              </div>
+
+              {/* Schedule badge */}
+              <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11.5, color:'var(--text-3)' }}>
+                <Icon name="clock" size={13} />
+                <span>{wf.schedule}</span>
+              </div>
+
+              {/* Results */}
+              {res && (
+                <div style={{ background:'var(--surface-2,#F8FAFC)', borderRadius:8, padding:'10px 12px', fontSize:12 }}>
+                  <div style={{ fontWeight:600, marginBottom:6, fontSize:11, textTransform:'uppercase', letterSpacing:.5, color:'var(--text-3)' }}>Dernier résultat — {ran}</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'4px 12px' }}>
+                    {wf.resultKeys.map(({ k, label }) => (
+                      res[k] !== undefined && <div key={k} style={{ display:'flex', justifyContent:'space-between' }}>
+                        <span style={{ color:'var(--text-3)' }}>{label}</span>
+                        <span style={{ fontWeight:700, color:'var(--text-1)' }}>{String(res[k])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Trigger button */}
+              <button
+                className="btn btn-primary"
+                style={{ marginTop:'auto', background: isLoading ? 'var(--text-3)' : wf.color, border:'none', cursor: isLoading?'wait':'pointer' }}
+                onClick={() => !isLoading && runWorkflow(wf)}
+                disabled={isLoading}
+              >
+                {isLoading ? 'En cours...' : 'Déclencher maintenant'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Telegram section */}
+      <div style={{ marginTop:28 }}>
+        <h2 style={{ fontSize:16, fontWeight:700, marginBottom:4 }}>Bot Telegram</h2>
+        <div style={{ fontSize:13, color:'var(--text-3)', marginBottom:14 }}>Liez votre compte Telegram pour recevoir les notifications des workflows directement sur votre téléphone.</div>
+        <div style={{ background:'var(--surface-2,#F8FAFC)', border:'1px solid var(--border)', borderRadius:10, padding:18, maxWidth:480 }}>
+          <TelegramLinkWidget toast={toast} />
+        </div>
+      </div>
+
+      {/* Webhook reference */}
+      <div style={{ marginTop:28 }}>
+        <h2 style={{ fontSize:16, fontWeight:700, marginBottom:4 }}>Référence Webhook</h2>
+        <div style={{ fontSize:13, color:'var(--text-3)', marginBottom:12 }}>OpenClaw envoie un POST signé à cette URL avec l'un des events suivants :</div>
+        <div style={{ background:'#0F172A', borderRadius:10, padding:16, fontFamily:'monospace', fontSize:12, color:'#E2E8F0', overflowX:'auto' }}>
+          <div style={{ color:'#94A3B8', marginBottom:8 }}>{'// URL : POST /api/openclaw/webhook'}</div>
+          <div style={{ color:'#94A3B8', marginBottom:8 }}>{'// Header : X-OpenClaw-Signature: <hmac-sha256>'}</div>
+          {[
+            ['planning.daily.trigger', 'Déclenche Workflow 1 — planning du jour'],
+            ['absence.notify',         'Déclenche Workflow 2 — notification absences'],
+            ['payment.overdue.scan',   'Déclenche Workflow 3 — paiements en retard'],
+            ['mail.inject',            'Déclenche Workflow 4 — injection emails'],
+            ['health.ping',            'Vérification de santé (no-op)'],
+          ].map(([ev, desc]) => (
+            <div key={ev} style={{ marginBottom:6 }}>
+              <span style={{ color:'#7DD3FC' }}>event</span>
+              <span style={{ color:'#E2E8F0' }}>: </span>
+              <span style={{ color:'#86EFAC' }}>"{ev}"</span>
+              <span style={{ color:'#64748B' }}> // {desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function TelegramLinkWidget({ toast }) {
+  const [code, setCode] = uSP2('');
+  const [linked, setLinked] = uSP2(null);
+  const [busy, setBusy] = uSP2(false);
+
+  uEP2(() => {
+    window.api.request('/telegram/status').then(r => setLinked(r.data?.linked || false)).catch(() => setLinked(false));
+  }, []);
+
+  const link = async () => {
+    if (!code || code.length !== 6) { toast({ type:'error', title:'Code invalide', desc:'Entrez le code à 6 chiffres reçu du bot.' }); return; }
+    setBusy(true);
+    try {
+      await window.api.request('/telegram/link', { method:'POST', body:{ code } });
+      setLinked(true); setCode('');
+      toast({ type:'success', title:'Telegram lié !', desc:'Vous recevrez désormais les notifications sur Telegram.' });
+    } catch (err) { toast({ type:'error', title:'Échec', desc: err.message }); }
+    setBusy(false);
+  };
+
+  const unlink = async () => {
+    if (!confirm('Délier Telegram ?')) return;
+    setBusy(true);
+    try {
+      await window.api.request('/telegram/unlink', { method:'POST' });
+      setLinked(false);
+      toast({ type:'success', title:'Telegram délié' });
+    } catch (err) { toast({ type:'error', title:'Erreur', desc: err.message }); }
+    setBusy(false);
+  };
+
+  if (linked === null) return <div style={{ fontSize:13, color:'var(--text-3)' }}>Chargement...</div>;
+
+  if (linked) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+      <div>
+        <div style={{ fontWeight:600, fontSize:14, color:'#5FA83C' }}>Telegram connecté</div>
+        <div style={{ fontSize:12, color:'var(--text-3)', marginTop:3 }}>Vous recevez les notifications en temps réel.</div>
+      </div>
+      <button className="btn" style={{ fontSize:12, color:'var(--red,#DC2626)', border:'1px solid var(--red,#DC2626)', background:'transparent' }} onClick={unlink} disabled={busy}>Délier</button>
+    </div>
+  );
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      <div style={{ fontSize:13 }}>
+        <b>Étape 1 :</b> Ouvrez <a href="https://t.me/CampusOpsBot" target="_blank" style={{ color:'#0891B2' }}>@CampusOpsBot</a> sur Telegram et envoyez <code style={{ background:'var(--surface-3,#F1F5F9)', padding:'1px 5px', borderRadius:4 }}>/start</code>
+      </div>
+      <div style={{ fontSize:13 }}><b>Étape 2 :</b> Entrez le code à 6 chiffres reçu :</div>
+      <div style={{ display:'flex', gap:8 }}>
+        <input className="inp" placeholder="123456" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g,''))} style={{ width:120, fontFamily:'monospace', letterSpacing:4, fontSize:16, textAlign:'center' }} />
+        <button className="btn btn-primary" onClick={link} disabled={busy || code.length !== 6}>{busy ? '...' : 'Lier'}</button>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { Payments, Users, Groups, Notifications, Progress, Settings, Automation, TelegramLinkWidget });

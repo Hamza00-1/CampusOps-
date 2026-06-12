@@ -56,4 +56,21 @@ router.post(
     mailController.send,
 );
 
+/** @swagger
+ * /api/mail/inject:
+ *   post:
+ *     tags: [Mail]
+ *     summary: Scan IMAP inbox and inject keyword-matching emails as internal notifications (Admin/Scolarite)
+ *     description: Reads the last 20 emails and creates in-app notifications for Admin/Scolarite when keywords like "absence justifiée" or "paiement reçu" are detected.
+ *     security: [{ BearerAuth: [] }]
+ *     responses:
+ *       200: { description: Injection summary with counts }
+ *       503: { description: IMAP not configured } */
+router.post(
+    '/inject',
+    authenticate,
+    requireRole('Admin', 'Scolarite'),
+    mailController.inject,
+);
+
 export default router;

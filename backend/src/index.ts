@@ -5,6 +5,7 @@ import { prisma } from './config/database';
 import { connectRedis, disconnectRedis } from './config/redis';
 import { verifyEmailConnection } from './services/email.service';
 import { verifyTelegramBot } from './services/telegram.service';
+import { startTelegramPolling, stopTelegramPolling } from './modules/telegram/telegram.bot';
 import { verifyImapConnection } from './integrations/email/imap';
 import { startCronJobs, stopCronJobs } from './integrations/openclaw/cron';
 
@@ -24,8 +25,9 @@ async function bootstrap(): Promise<void> {
         // 3. Verify SMTP Email connection
         await verifyEmailConnection();
 
-        // 4. Verify Telegram Bot
+        // 4. Verify Telegram Bot + start polling
         await verifyTelegramBot();
+        await startTelegramPolling();
 
         // 5. Verify IMAP inbox (optional)
         await verifyImapConnection();
@@ -55,6 +57,7 @@ async function bootstrap(): Promise<void> {
             logger.info(`\n${signal} received. Shutting down gracefully...`);
 
             stopCronJobs();
+            stopTelegramPolling();
 
             server.close(() => {
                 logger.info('🔒 HTTP server closed');
