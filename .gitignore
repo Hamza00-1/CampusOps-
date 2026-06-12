@@ -18,6 +18,9 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 
+# Claude Code local settings (may contain credentials)
+.claude/
+
 # editor/OS
 .DS_Store
 .vscode/
