@@ -34,15 +34,29 @@ Le projet respecte une architecture **Cloud-Native** : API REST sécurisée (Nod
 |---------|--------|
 | 🔐 **Authentification** | JWT (Access + Refresh tokens), RBAC, Forgot Password (token Redis + email), bcrypt |
 | 👥 **Gestion des Utilisateurs** | CRUD complet, filtrage par rôle/branche, invitation par email |
-| 📅 **Planning** | Emplois du temps hebdomadaires, vue par rôle (admin / prof / étudiant) |
-| ✅ **Absences** | Marquage individuel & en masse, justifications, statistiques de présence |
+| 📅 **Planning** | Emplois du temps **dynamiques** (semaine/jour/mois réels), vue adaptée au rôle |
+| ✅ **Absences** | Marquage individuel & en masse par l'enseignant, justifications ; chaque étudiant voit son propre relevé + son taux de présence |
+| 📝 **Notes** | Carnet de notes par module (Exam / TD / TP / Projet), **persistées en base** ; relevé (transcript) avec moyennes côté étudiant |
 | 📊 **Avancement Pédagogique** | Suivi % par module/groupe, historique |
 | 💳 **Paiements** | Suivi scolarité + mensualités, reçus envoyés par email automatiquement |
 | 🔔 **Notifications** | Centre de notifications in-app (non-lues, marquer comme lu) |
 | 📧 **Email (SMTP + IMAP)** | Envoi via Gmail SMTP, lecture boîte de réception via IMAP |
 | 🤖 **Bot Telegram** | Liaison compte via OTP, `/today`, `/week`, `/absence`, `/progress`, `/help` |
-| 🔗 **Webhooks OpenClaw** | Triggers automatisés pour planning quotidien et notifications d'absences |
+| 🔗 **Webhooks OpenClaw** | Triggers automatisés : planning quotidien, scan des paiements en retard, notifications d'absences |
 | 📖 **Swagger API Docs** | Plus de 50 endpoints documentés et testables interactivement |
+
+---
+
+## 👤 Vues par Rôle
+
+L'interface s'adapte automatiquement au rôle de l'utilisateur connecté (RBAC côté API + filtrage côté UI) :
+
+| Rôle | Ce qu'il voit / peut faire |
+|------|----------------------------|
+| **Administrateur** | Accès complet : utilisateurs, branches, groupes, modules, planning, paiements, automatisation OpenClaw |
+| **Scolarité** | Gestion des étudiants, groupes, paiements et notifications ; relances automatiques |
+| **Enseignant** | Son propre planning, marquage des présences de ses groupes, saisie & sauvegarde des **notes** par module |
+| **Étudiant** | Son emploi du temps, son **relevé d'absences** et son **relevé de notes** (lecture seule), ses paiements |
 
 ---
 
@@ -186,37 +200,46 @@ CampusOps-/
 ├── 📄 README.md                          ← Ce fichier
 ├── 📄 DEPLOYMENT.md                      ← Guide de déploiement cloud
 ├── 📄 CONTRIBUTING.md                    ← Conventions de développement
+├── 📄 CampusOps_Roadmap.md               ← Feuille de route du projet
+├── 📄 render.yaml / railway.json         ← Configurations de déploiement cloud
 │
 ├── 📁 doc/
 │   ├── Cahier_des_Charges.md             ← Spécifications fonctionnelles & ERD
 │   ├── OpenClaw_Integration_Report.md    ← Rapport d'intégration webhooks
+│   ├── progress.md                       ← Journal d'avancement
+│   ├── spec_text.txt                     ← Extrait texte du sujet
 │   └── Projet de fin de semestre.docx    ← Énoncé original du professeur
 │
 ├── 📁 CompusOS_Frontend/
-│   ├── CampusOps.html                    ← Point d'entrée de l'application
+│   ├── CampusOps.html                    ← Point d'entrée de l'application (React via Babel)
 │   └── co2/
 │       ├── api.js                        ← Client API (JWT auto-refresh)
-│       ├── data.js                       ← Données EIDIA & helpers i18n
-│       ├── login.jsx                     ← Page connexion + Forgot/Reset Password
-│       ├── app.jsx                       ← Racine React + synchronisation données
+│       ├── data.js                       ← Constantes EIDIA & helpers i18n
+│       ├── login.jsx                     ← Connexion + Forgot/Reset Password
+│       ├── app.jsx                       ← Racine React, hydratation de session & sync des données live
 │       ├── shell.jsx                     ← Sidebar + Topbar
-│       ├── pages1.jsx                    ← Dashboard, Planning, Absences, Notes
-│       ├── pages2.jsx                    ← Paiements, Utilisateurs, Groupes, Notifications, Paramètres
+│       ├── pages1.jsx                    ← Dashboard · Planning · Présences · Modules · Notes
+│       ├── pages2.jsx                    ← Paiements · Utilisateurs · Groupes · Notifications · Progression · Paramètres · Automation
 │       └── styles.css                    ← Système de design (thèmes clair/sombre)
+│
+├── 📁 team-setup-guide/                  ← Guide d'installation pour l'équipe
 │
 └── 📁 backend/
     ├── docker-compose.yml                ← PostgreSQL 16 + Redis 7
     ├── Dockerfile                        ← Build multi-étapes (production)
     ├── prisma/
-    │   ├── schema.prisma                 ← 10 modèles, 4 enums
-    │   └── seed.ts                       ← Données EIDIA réelles (5 comptes + planning)
+    │   ├── schema.prisma                 ← 11 modèles, 6 enums
+    │   └── seed.ts                       ← Données EIDIA réelles (planning ancré sur la semaine courante)
     └── src/
         ├── config/                       ← env, database, redis, swagger
-        ├── middleware/                   ← auth JWT, RBAC, Zod validation, Winston logs
-        ├── modules/                      ← 10 modules (auth, users, planning, absences...)
+        ├── middleware/                   ← auth JWT, RBAC, validation Zod, logs Winston
+        ├── modules/                      ← 13 modules métier (voir ci-dessous)
         ├── services/                     ← email.service.ts, telegram.service.ts
+        ├── integrations/                 ← openclaw (webhooks), email (IMAP/SMTP)
         └── utils/                        ← jwt.ts, hash.ts, response.ts
 ```
+
+> **13 modules backend** : `auth` · `users` · `branches` · `modules` · `groups` · `planning` · `absences` · `grades` · `progress` · `payments` · `notifications` · `telegram` · `mail`
 
 ---
 
@@ -230,7 +253,8 @@ CampusOps-/
 | **Modules** | CRUD (par branche) |
 | **Groups** | CRUD + inscription/désinscription étudiants |
 | **Planning** | CRUD + `GET /today` + `GET /week` (adapté au rôle) |
-| **Absences** | Marquage individuel/masse, justification, statistiques |
+| **Absences** | Marquage individuel/masse, justification, statistiques par étudiant |
+| **Grades** | `GET /grades` (filtres) · `POST /grades/bulk` (upsert) · `GET /grades/transcript/:studentId` |
 | **Progress** | Upsert par module/groupe, résumé de groupe |
 | **Payments** | CRUD + filtre retards + résumé étudiant + **reçu email automatique** |
 | **Notifications** | Liste + compteur non-lus + marquer lu/tous lus |

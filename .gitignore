@@ -21,6 +21,9 @@ yarn-error.log*
 # Claude Code local settings (may contain credentials)
 .claude/
 
+# Duplicate working copy (kept locally, never committed)
+CampusOps-/
+
 # editor/OS
 .DS_Store
 .vscode/
