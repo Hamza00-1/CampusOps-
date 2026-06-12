@@ -95,13 +95,21 @@ async function main() {
   }
   console.log('   → 2 students enrolled in CS-G1');
 
-  // ── 5. Planning (3 sessions/week for Imad Adnane) ──
-  console.log('📅 Creating planning sessions...');
+  // ── 5. Planning — full current week, Mon→Fri ──
+  // Anchored to getMonday(new Date()) so the schedule always lands on the
+  // *current* week. Every weekday has at least one session, which guarantees
+  // that whichever day the demo runs on, "today" has a class and Workflow 1
+  // (daily planning) has something to send. Re-run `npm run seed` to re-anchor.
+  console.log('📅 Creating planning sessions for the current week...');
   const monday = getMonday(new Date());
   const sessions = [
-    { mod: modules[0], day: 0, h: 8,  eh: 10, room: 'Amphi A' },      // Mon 8-10  Intro to AI
-    { mod: modules[1], day: 2, h: 10, eh: 12, room: 'Salle B-204' },   // Wed 10-12 Blockchain
-    { mod: modules[2], day: 4, h: 14, eh: 16, room: 'Lab Cyber' },     // Fri 14-16 DevSecOps
+    { mod: modules[0], day: 0, h: 8,  eh: 10, room: 'Amphi A' },      // Mon  Intro to AI
+    { mod: modules[5], day: 0, h: 14, eh: 16, room: 'Lab Cyber' },    // Mon  NoSQL Security
+    { mod: modules[1], day: 1, h: 10, eh: 12, room: 'Salle B-204' },  // Tue  Blockchain
+    { mod: modules[2], day: 2, h: 9,  eh: 11, room: 'Lab Cyber' },    // Wed  DevSecOps
+    { mod: modules[3], day: 3, h: 14, eh: 16, room: 'Salle B-201' },  // Thu  Digital Forensics
+    { mod: modules[6], day: 4, h: 8,  eh: 10, room: 'Amphi A' },      // Fri  Distributed Apps
+    { mod: modules[2], day: 4, h: 14, eh: 16, room: 'Lab Cyber' },    // Fri  DevSecOps
   ];
 
   const createdSessions: { id: string }[] = [];
@@ -120,7 +128,8 @@ async function main() {
 
   // ── 6. Absences ──
   console.log('✍️  Creating absence records...');
-  const statuses: AbsenceStatus[] = [AbsenceStatus.Present, AbsenceStatus.Present, AbsenceStatus.Late];
+  // Includes at least one Absent (created "now") so Workflow 2 (absence.notify) has something to send.
+  const statuses: AbsenceStatus[] = [AbsenceStatus.Present, AbsenceStatus.Absent, AbsenceStatus.Late];
   let absCount = 0;
   for (let i = 0; i < createdSessions.length; i++) {
     for (let j = 0; j < students.length; j++) {
@@ -135,17 +144,21 @@ async function main() {
   // ── 7. Payments (Inscription + Mensualité per student) ──
   console.log('💸 Creating payments...');
   const lastMonth = new Date(); lastMonth.setMonth(lastMonth.getMonth() - 1);
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
   const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
 
   for (const s of students) {
     await prisma.payment.createMany({
       data: [
         { studentId: s.id, planType: PaymentPlanType.Inscription, amount: 45000.00, status: PaymentStatus.Paid, dueDate: lastMonth },
+        // Overdue (due 7 days ago, still Unpaid) → triggers Workflow 3 (overdue scan)
+        { studentId: s.id, planType: PaymentPlanType.Mensualite, amount: 5000.00, status: PaymentStatus.Unpaid, dueDate: weekAgo },
+        // Upcoming (due next month) → stays quiet, proves the scan is selective
         { studentId: s.id, planType: PaymentPlanType.Mensualite, amount: 5000.00, status: PaymentStatus.Unpaid, dueDate: nextMonth },
       ],
     });
   }
-  console.log(`   → ${students.length * 2} payments`);
+  console.log(`   → ${students.length * 3} payments`);
 
   // ── 8. Progress ──
   console.log('📈 Creating progress tracking...');
@@ -169,7 +182,7 @@ async function main() {
   console.log('\n✅ EIDIA seed complete!');
   console.log('   Branch: 1 (EIDIA) | Users: 5 | Group: CS-G1 | Students: 2');
   console.log(`   Modules: ${modules.length} | Sessions: ${createdSessions.length} | Absences: ${absCount}`);
-  console.log(`   Payments: ${students.length * 2} | Notifications: 4`);
+  console.log(`   Payments: ${students.length * 3} | Notifications: 4`);
   console.log('\n   All accounts (password: CampusOps@2026):');
   console.log('     • hamza.khchichine@eidia.ueuromed.org  [Admin]');
   console.log('     • karima.eddahhak@eidia.ueuromed.org   [Scolarite]');

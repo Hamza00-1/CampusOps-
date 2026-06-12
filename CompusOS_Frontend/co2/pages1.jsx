@@ -341,7 +341,8 @@ function DashStudent({ t, onNav }) {
 function Planning({ role, toast }) {
   const { t, lang } = useI18n();
   const [view, setView] = uSP(()=> localStorage.getItem('co2_planning_view') || 'week');
-  const [day, setDay] = uSP(0);
+  // Default the day-view to the real current weekday (Mon=0 … Sat=5; Sunday clamps to Sat)
+  const [day, setDay] = uSP(()=>{ const d=new Date().getDay(); return d===0?5:Math.min(d-1,5); });
   const [editing, setEditing] = uSP(null);
   const [adding, setAdding] = uSP(false);
   const [form, setForm] = uSP({ mod:'', grp:'', day:0, room:'', start:9, dur:1.5 });
@@ -367,6 +368,15 @@ function Planning({ role, toast }) {
 
   const canEdit = role==='admin' || role==='scolarite';
   const days = lang==='fr' ? DAYS_FR : DAYS_EN;
+
+  // ── Real, live dates for the current week (Mon→Sat) and the real "today" column ──
+  const weekDates = (()=>{
+    const mon = new Date(); const dow = mon.getDay();
+    mon.setDate(mon.getDate() - dow + (dow===0?-6:1)); mon.setHours(0,0,0,0);
+    return Array.from({length:6},(_,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+  })();
+  const todayMid = (()=>{ const t=new Date(); t.setHours(0,0,0,0); return t.getTime(); })();
+  const todayIdx = weekDates.findIndex(d => d.getTime()===todayMid);
 
   const openEdit = (s) => {
     setForm({ mod: s.mod||'', grp: s.grp||'', day: s.day||0, room: s.room||'', start: s.start||9, dur: s.dur||1.5, _id: s.id });
@@ -479,7 +489,7 @@ function Planning({ role, toast }) {
       {sessions.length>0 && view==='week' && (
         <div className="tt">
           <div className="tt-h"></div>
-          {days.map((d,i) => <div key={i} className={`tt-h ${i===0?'today':''}`}>{d}<div className="dn">{21+i}</div></div>)}
+          {days.map((d,i) => <div key={i} className={`tt-h ${i===todayIdx?'today':''}`}>{d}<div className="dn">{weekDates[i].getDate()}</div></div>)}
           {HOURS.map(h => (
             <React.Fragment key={h}>
               <div className="tt-time">{String(h).padStart(2,'0')}:00</div>
@@ -595,23 +605,24 @@ function Planning({ role, toast }) {
 }
 
 function MonthView({ sessions, days }) {
-  const cells = [];
-  for(let i=0;i<35;i++){
-    const dayNum = i - 0 + 21;
-    cells.push(dayNum);
-  }
+  // Real current month grid: 6 weeks, Monday-first, with the real "today" highlighted.
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth();
+  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Mon=0 … Sun=6
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayDate = now.getDate();
   return (
     <div className="month-grid">
       {days.concat(['Sun']).map(d => <div key={d} className="mh">{d}</div>)}
-      {Array.from({length:35}).map((_,i) => {
-        const dayNum = 14 + i;
-        const inMonth = dayNum>=14 && dayNum<=31;
-        const weekday = i % 7;
-        const today = dayNum===22;
-        const evs = weekday<6 ? sessions.filter(s => s.day===weekday) : [];
+      {Array.from({length:42}).map((_,i) => {
+        const dayNum = i - firstDow + 1;
+        const inMonth = dayNum>=1 && dayNum<=daysInMonth;
+        const weekday = i % 7; // 0=Mon … 6=Sun
+        const isToday = inMonth && dayNum===todayDate;
+        const evs = (inMonth && weekday<6) ? sessions.filter(s => s.day===weekday) : [];
         return (
-          <div key={i} className={`mc ${!inMonth?'muted':''} ${today?'today':''}`}>
-            <div className="dnum">{dayNum<=31?dayNum:dayNum-31}</div>
+          <div key={i} className={`mc ${!inMonth?'muted':''} ${isToday?'today':''}`}>
+            <div className="dnum">{inMonth ? dayNum : ''}</div>
             {evs.slice(0,3).map((e,j)=>{
               const M = MODULES.find(m=>m.code===e.mod||m.name===e.mod) || {color:'#5FA83C'};
               return <div key={j} className="me" style={{borderLeftColor:M.color}}>{e.mod} — {e.grp}</div>;

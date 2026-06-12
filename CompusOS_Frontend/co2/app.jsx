@@ -111,28 +111,42 @@ function App() {
   // Expose globally so any page component can call it after mutations
   window.refreshAllData = refreshAllData;
 
+  // Load the logged-in user's profile and hydrate session globals.
+  // Used by BOTH the boot path (existing token on page load) and a fresh
+  // login, so window._userGroups is always populated — otherwise the
+  // student Planning/Absences filters fall back to a stale default group.
+  const hydrateSession = async () => {
+    const prof = await window.api.request('/auth/profile');
+    const u = prof.data;
+    const role = (u.role || 'admin').toLowerCase();
+    const groups   = (u.studentGroups || []).map(sg => sg.group?.name).filter(Boolean);
+    const groupIds = (u.studentGroups || []).map(sg => sg.group?.id).filter(Boolean);
+
+    // Inject real user into ROLES — keep the group so the etudiant filter
+    // has a valid fallback even before _userGroups is read.
+    ROLES[role] = {
+      id: role,
+      label: u.role,
+      name: u.name,
+      email: u.email,
+      color: ROLES[role]?.color || '#5FA83C',
+      group: groups[0] || ROLES[role]?.group,
+    };
+    window._userId       = u.id;
+    window._userGroups   = groups;
+    window._userGroupIds = groupIds;
+
+    await refreshAllData();
+    return role;
+  };
+  window._hydrateSession = hydrateSession;
+
   // Boot: check token → fetch profile → load live data
   uEA(() => {
     const boot = async () => {
       if (!window.api.getToken()) { setLoading(false); return; }
       try {
-        const prof = await window.api.request('/auth/profile');
-        const u = prof.data;
-        const role = (u.role || 'admin').toLowerCase();
-
-        // Inject real user into ROLES
-        ROLES[role] = {
-          id: role,
-          label: u.role,
-          name: u.name,
-          email: u.email,
-          color: ROLES[role]?.color || '#5FA83C',
-        };
-        window._userId = u.id;
-        window._userGroups    = (u.studentGroups || []).map(sg => sg.group?.name).filter(Boolean);
-        window._userGroupIds  = (u.studentGroups || []).map(sg => sg.group?.id).filter(Boolean);
-
-        await refreshAllData();
+        const role = await hydrateSession();
         setAuth(role);
       } catch(err) {
         // Token invalid — clear and show login
@@ -177,8 +191,15 @@ function App() {
     </div>
   );
 
-  // Not authenticated — show login
-  if (!auth) return <Login onAuth={(role) => { setAuth(role); }} />;
+  // Not authenticated — show login.
+  // On success, hydrate the profile (groups, etc.) the same way boot does,
+  // so a fresh login behaves identically to a page reload.
+  if (!auth) return <Login onAuth={async () => {
+    setLoading(true);
+    try { const role = await hydrateSession(); setAuth(role); }
+    catch (e) { window.api.clearTokens(); setAuth(null); }
+    finally { setLoading(false); }
+  }} />;
 
   const unread = NOTIFICATIONS.filter(n=>!n.read).length;
 
