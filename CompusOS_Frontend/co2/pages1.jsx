@@ -1040,37 +1040,72 @@ function Modules({ role, toast }) {
 }
 
 // ─── GRADES ───
+const GRADE_TYPES = ['Exam', 'TD', 'TP', 'Project'];
+const GRADE_SEMESTER = 'S1-2024';
+
 function Grades({ role, toast }) {
   const { t, lang } = useI18n();
   const readOnly = role==='admin' || role==='scolarite';
 
-  if (role==='etudiant') {
-    const overall = (STUDENT_GRADES.reduce((a,g)=>a+g.average,0)/STUDENT_GRADES.length).toFixed(2);
+  // All hooks declared unconditionally (rules of hooks).
+  const [edits, setEdits] = uSP({});
+  const [groupSel, setGroupSel] = uSP(() => GROUPS_LIST[0]?.id || '');
+  const [moduleSel, setModuleSel] = uSP(() => MODULES[0]?.id || '');
+  const [grades, setGrades] = uSP([]);   // grade records for the selected module
+  const [saving, setSaving] = uSP(false);
+  const [tx, setTx] = uSP(null);         // student's own transcript
+
+  // Student: load own transcript (real grades teachers saved)
+  React.useEffect(() => {
+    if (role !== 'etudiant') return;
+    const uid = window._userId;
+    if (!uid) return;
+    (async () => {
+      try { const r = await api.request('/grades/transcript/' + uid); setTx(r.data || null); }
+      catch (e) { console.warn('Transcript:', e.message); }
+    })();
+  }, [role]);
+
+  // Teacher/Admin: load grades for the selected module
+  React.useEffect(() => {
+    if (role === 'etudiant' || !moduleSel) return;
+    (async () => {
+      try {
+        const r = await api.request(`/grades?moduleId=${moduleSel}&semester=${GRADE_SEMESTER}`);
+        setGrades(r.data || []);
+        setEdits({});
+      } catch (e) { console.warn('Grades load:', e.message); }
+    })();
+  }, [role, moduleSel]);
+
+  // ── Student view: read-only transcript ──
+  if (role === 'etudiant') {
+    const mods = (tx && tx.modules) || [];
+    const overall = mods.length ? tx.overall : null;
+    const cell = (m, gt) => { const g = (m.grades||[]).find(x => x.gradeType===gt); return g != null ? Number(g.value).toFixed(1) : '—'; };
     return (
       <>
         <div className="page-head">
           <div>
             <h1>{t('nav.Grades')}</h1>
-            <div className="sub">{ROLES.etudiant.name} — Group {ROLES.etudiant.group}</div>
+            <div className="sub">{ROLES.etudiant.name} — Group {(window._userGroups&&window._userGroups[0])||ROLES.etudiant.group}</div>
           </div>
-          <div className="page-actions">
-            <div style={{padding:'8px 14px',background:'var(--accent-50)',color:'var(--accent)',borderRadius:8,fontWeight:700,fontSize:14,fontFamily:'var(--head-font)'}}>{t('grade.overall')}: {overall}/20</div>
-          </div>
+          {overall!=null && (
+            <div className="page-actions">
+              <div style={{padding:'8px 14px',background:'var(--accent-50)',color:'var(--accent)',borderRadius:8,fontWeight:700,fontSize:14,fontFamily:'var(--head-font)'}}>{t('grade.overall')}: {Number(overall).toFixed(2)}/20</div>
+            </div>
+          )}
         </div>
         <div className="card">
           <table className="tbl">
-            <thead><tr><th>{t('grade.module')}</th><th>{t('grade.exam')}</th><th>{t('grade.homework')}</th><th>{t('grade.participation')}</th><th>{t('grade.average')}</th></tr></thead>
+            <thead><tr><th>{t('grade.module')}</th>{GRADE_TYPES.map(gt=><th key={gt}>{gt}</th>)}<th>{t('grade.average')}</th></tr></thead>
             <tbody>
-              {STUDENT_GRADES.map(g => (
-                <tr key={g.module}>
-                  <td>
-                    <div style={{fontWeight:600}}>{g.name}</div>
-                    <div style={{fontSize:11,color:'var(--text-3)',fontFamily:'var(--mono)'}}>{g.module}</div>
-                  </td>
-                  <td className="mono">{g.exam.toFixed(1)}</td>
-                  <td className="mono">{g.hw.toFixed(1)}</td>
-                  <td className="mono">{g.participation.toFixed(1)}</td>
-                  <td><strong style={{fontFamily:'var(--head-font)',fontSize:15,color:g.average>=14?'var(--green)':g.average>=10?'var(--orange)':'var(--red)'}}>{g.average.toFixed(2)}</strong></td>
+              {mods.length===0 && <tr><td colSpan={6}><div className="empty">{lang==='fr'?'Aucune note publiée pour le moment.':'No grades published yet.'}</div></td></tr>}
+              {mods.map(m => (
+                <tr key={m.module.id}>
+                  <td style={{fontWeight:600}}>{m.module.name}</td>
+                  {GRADE_TYPES.map(gt => <td key={gt} className="mono">{cell(m,gt)}</td>)}
+                  <td><strong style={{fontFamily:'var(--head-font)',fontSize:15,color:m.average>=14?'var(--green)':m.average>=10?'var(--orange)':'var(--red)'}}>{Number(m.average).toFixed(2)}</strong></td>
                 </tr>
               ))}
             </tbody>
@@ -1080,26 +1115,63 @@ function Grades({ role, toast }) {
     );
   }
 
-  // Teacher / Admin / Scolarité view
-  const [edits, setEdits] = uSP({});
-  const [groupSel, setGroupSel] = uSP(() => GROUPS_LIST[0]?.id || '');
+  // ── Teacher / Admin / Scolarité: editable gradebook (per module) ──
   const selGroup = GROUPS_LIST.find(g => g.id === groupSel);
   const classStudents = STUDENTS.filter(s => selGroup ? (s.group===selGroup.name || s.group===selGroup.id) : false);
-  const setVal = (sid, key, v) => setEdits(e => ({ ...e, [sid+'_'+key]: v }));
-  const get = (s, key, def) => edits[s.id+'_'+key] !== undefined ? edits[s.id+'_'+key] : def;
+
+  const gradeMap = {};
+  grades.forEach(g => { (gradeMap[g.studentId] = gradeMap[g.studentId] || {})[g.gradeType] = Number(g.value); });
+
+  const get = (sid, gt) => {
+    const k = sid+'_'+gt;
+    if (edits[k] !== undefined) return edits[k];
+    const v = gradeMap[sid] && gradeMap[sid][gt];
+    return v === undefined ? '' : v;
+  };
+  const setVal = (sid, gt, v) => setEdits(e => ({ ...e, [sid+'_'+gt]: v }));
+  const avgOf = (sid) => {
+    const vals = GRADE_TYPES.map(gt => parseFloat(get(sid, gt))).filter(v => !isNaN(v));
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  };
+
+  const save = async () => {
+    if (!moduleSel) { toast({type:'error',title:'Select a module first'}); return; }
+    if (classStudents.length===0) { toast({type:'error',title:'No students in this group'}); return; }
+    setSaving(true);
+    try {
+      let count = 0;
+      for (const gt of GRADE_TYPES) {
+        const arr = classStudents
+          .map(s => ({ studentId: s.id, value: parseFloat(get(s.id, gt)) }))
+          .filter(g => !isNaN(g.value) && g.value>=0 && g.value<=20);
+        if (arr.length) {
+          await api.request('/grades/bulk', { method:'POST', body:{ moduleId: moduleSel, gradeType: gt, semester: GRADE_SEMESTER, grades: arr } });
+          count += arr.length;
+        }
+      }
+      const r = await api.request(`/grades?moduleId=${moduleSel}&semester=${GRADE_SEMESTER}`);
+      setGrades(r.data || []);
+      setEdits({});
+      toast({type:'success',title:'Grades saved', desc:`${count} grade(s) saved to the database.`});
+    } catch (e) { toast({type:'error',title:'Save failed', desc: e.message || 'API error'}); }
+    setSaving(false);
+  };
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>{t('nav.Grades')}</h1>
-          <div className="sub">CS & Cyber Security — S8 Modules</div>
+          <div className="sub">CS & Cyber Security — {GRADE_SEMESTER}</div>
         </div>
         <div className="page-actions">
           <select value={groupSel} onChange={e=>setGroupSel(e.target.value)} style={{padding:'8px 12px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
             {GROUPS_LIST.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
-          {!readOnly && <button className="btn btn-primary btn-sm" onClick={()=>{ toast({type:'success',title:'Grades saved', desc:`${Object.keys(edits).length} changes saved.`}); setEdits({}); }}>{t('btn.save')}</button>}
+          <select value={moduleSel} onChange={e=>setModuleSel(e.target.value)} style={{padding:'8px 12px',borderRadius:7,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontSize:13}}>
+            {MODULES.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          {!readOnly && <button className="btn btn-primary btn-sm" disabled={saving} onClick={save}>{saving ? '...' : t('btn.save')}</button>}
         </div>
       </div>
       {readOnly && (
@@ -1114,15 +1186,10 @@ function Grades({ role, toast }) {
       {classStudents.length>0 && (
         <div className="card">
           <table className="tbl">
-            <thead><tr><th>Student</th><th>Midterm</th><th>Final</th><th>Homework</th><th>Participation</th><th>Average</th></tr></thead>
+            <thead><tr><th>Student</th>{GRADE_TYPES.map(gt=><th key={gt}>{gt}</th>)}<th>Average</th></tr></thead>
             <tbody>
-              {classStudents.map((s,i) => {
-                const sample = { mid:12+i*0.4, fin:13+i*0.3, hw:14+i*0.2, part:15+(i%4) };
-                const mid = parseFloat(get(s,'mid',sample.mid))||0;
-                const fin = parseFloat(get(s,'fin',sample.fin))||0;
-                const hw = parseFloat(get(s,'hw',sample.hw))||0;
-                const part = parseFloat(get(s,'part',sample.part))||0;
-                const a = ((mid+fin+hw+part)/4).toFixed(2);
+              {classStudents.map(s => {
+                const a = avgOf(s.id);
                 return (
                   <tr key={s.id}>
                     <td>
@@ -1131,13 +1198,13 @@ function Grades({ role, toast }) {
                         <div style={{fontWeight:600}}>{s.name}</div>
                       </div>
                     </td>
-                    {['mid','fin','hw','part'].map(k => (
-                      <td key={k}>
-                        {readOnly ? <span className="mono">{parseFloat(get(s,k,sample[k])).toFixed(1)}</span>
-                                  : <input type="number" min="0" max="20" step="0.25" value={get(s,k,sample[k])} onChange={e=>setVal(s.id,k,e.target.value)} style={{width:70,padding:'5px 8px',borderRadius:6,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontFamily:'var(--mono)',fontSize:13}}/>}
+                    {GRADE_TYPES.map(gt => (
+                      <td key={gt}>
+                        {readOnly ? <span className="mono">{get(s.id,gt)===''?'—':parseFloat(get(s.id,gt)).toFixed(1)}</span>
+                                  : <input type="number" min="0" max="20" step="0.25" placeholder="—" value={get(s.id,gt)} onChange={e=>setVal(s.id,gt,e.target.value)} style={{width:64,padding:'5px 8px',borderRadius:6,border:'1px solid var(--border)',background:'var(--surface)',color:'var(--text)',fontFamily:'var(--mono)',fontSize:13}}/>}
                       </td>
                     ))}
-                    <td><strong style={{fontFamily:'var(--head-font)',fontSize:14,color:a>=14?'var(--green)':a>=10?'var(--orange)':'var(--red)'}}>{a}</strong></td>
+                    <td>{a==null ? <span className="mono" style={{color:'var(--text-3)'}}>—</span> : <strong style={{fontFamily:'var(--head-font)',fontSize:14,color:a>=14?'var(--green)':a>=10?'var(--orange)':'var(--red)'}}>{a.toFixed(2)}</strong>}</td>
                   </tr>
                 );
               })}
